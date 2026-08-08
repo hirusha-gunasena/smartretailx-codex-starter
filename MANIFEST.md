@@ -1,11 +1,13 @@
 # Starter Pack Manifest
 
 ## Codex guidance
+
 - `AGENTS.md`
 - `CODEX_TASKS.md`
 - `CODEX_PROMPTS.md`
 
 ## Product and architecture
+
 - `PROJECT_SPEC.md`
 - `ARCHITECTURE.md`
 - `ROADMAP.md`
@@ -13,6 +15,7 @@
 - `docs/adr/*`
 
 ## Engineering controls
+
 - `TEST_STRATEGY.md`
 - `SECURITY.md`
 - `COST_GUARDRAILS.md`
@@ -20,6 +23,7 @@
 - `CONTRIBUTING.md`
 
 ## Repository configuration
+
 - `package.json`
 - `tsconfig.base.json`
 - `eslint.config.mjs`
@@ -29,6 +33,7 @@
 - `.github/workflows/ci.yml`
 
 ## Initial contracts and infrastructure
+
 - `openapi/smartretailx-api.yaml`
 - `infrastructure/*`
 - Placeholder application and service directories

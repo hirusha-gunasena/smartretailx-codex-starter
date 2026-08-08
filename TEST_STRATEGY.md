@@ -1,7 +1,9 @@
 # Test Strategy
 
 ## Unit tests
+
 Test domain rules without AWS:
+
 - Product validation
 - Order totals and state transitions
 - Inventory reservation outcomes
@@ -10,6 +12,7 @@ Test domain rules without AWS:
 - Idempotency decisions
 
 ## Component/API tests
+
 - Lambda handlers with representative API Gateway events
 - Express endpoints with Supertest
 - Invalid JSON and validation failures
@@ -17,12 +20,14 @@ Test domain rules without AWS:
 - Consistent error envelopes
 
 ## Integration tests
+
 - DynamoDB repositories against local emulation or isolated AWS test resources
 - EventBridge publisher and SQS consumer boundaries
 - Conditional inventory updates
 - DLQ behavior
 
 ## End-to-end
+
 1. Create a product.
 2. Set inventory.
 3. Authenticate a customer.
@@ -32,7 +37,9 @@ Test domain rules without AWS:
 7. Verify notification.
 
 ## Performance
+
 k6 scenarios:
+
 - Baseline
 - Normal load
 - Stress
@@ -41,6 +48,7 @@ k6 scenarios:
 Capture p50, p95, p99, throughput, error rate, ECS CPU/memory, Lambda duration, queue depth and throttles.
 
 ## Security tests
+
 - Missing, invalid and expired JWTs
 - Role violations
 - Payload size and schema validation

@@ -8,6 +8,7 @@
 6. Update relevant documentation and evidence.
 
 Suggested commit format:
+
 ```text
 feat(catalogue): add product creation handler
 test(inventory): cover duplicate order events

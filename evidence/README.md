@@ -1,6 +1,7 @@
 # Assessment Evidence
 
 Store curated, non-secret evidence here:
+
 - Architecture and AWS console screenshots
 - CloudWatch dashboard and alarm screenshots
 - Test reports

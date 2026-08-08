@@ -1,9 +1,11 @@
 # SmartRetailX Codex Instructions
 
 ## Mission
+
 Build SmartRetailX as a secure, observable, event-driven AWS distributed web application. Work incrementally, keep every change reviewable, and preserve a working repository after each task.
 
 ## Mandatory stack
+
 - TypeScript with `strict: true`
 - Node.js for all backend services
 - React + Vite for the web application
@@ -13,6 +15,7 @@ Build SmartRetailX as a secure, observable, event-driven AWS distributed web app
 - Jest for unit tests, Supertest for HTTP tests, Newman for Postman collections, and k6 for performance tests
 
 ## Architecture rules
+
 1. Services:
    - Product Catalogue: Lambda + API Gateway + DynamoDB + S3
    - Order Processing: Express container on ECS Fargate behind an ALB
@@ -29,6 +32,7 @@ Build SmartRetailX as a secure, observable, event-driven AWS distributed web app
 10. Add health endpoints for containerized services.
 
 ## Coding rules
+
 - Prefer small modules and explicit dependencies.
 - Validate external input with Zod.
 - Use typed domain errors and consistent API error responses.
@@ -38,21 +42,27 @@ Build SmartRetailX as a secure, observable, event-driven AWS distributed web app
 - Do not edit files unrelated to the assigned task.
 
 ## Required checks before completion
+
 Run the relevant subset and report results:
+
 ```bash
 npm run format:check
 npm run lint
 npm run typecheck
 npm test
 ```
+
 For infrastructure changes also run:
+
 ```bash
 npm run cdk:synth
 npm run cdk:diff
 ```
+
 Do not run `cdk deploy` unless the user explicitly approves the reviewed diff.
 
 ## Deployment safety
+
 - First run `aws sts get-caller-identity` and confirm the target account and region.
 - Never deploy chargeable infrastructure without a cost note.
 - Apply tags: `Project=SmartRetailX`, `Environment`, `Owner`, and `ManagedBy=CDK`.
@@ -60,6 +70,7 @@ Do not run `cdk deploy` unless the user explicitly approves the reviewed diff.
 - Never delete production-like resources without explicit user approval.
 
 ## Task workflow
+
 1. Read `PROJECT_SPEC.md`, `ARCHITECTURE.md`, `ROADMAP.md`, and `CODEX_TASKS.md`.
 2. Restate the bounded task and affected files.
 3. Implement the smallest complete change.

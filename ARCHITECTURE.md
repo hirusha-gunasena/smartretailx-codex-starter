@@ -1,6 +1,7 @@
 # SmartRetailX Architecture
 
 ## Primary request path
+
 ```text
 Browser -> Route 53 -> CloudFront/WAF -> React frontend
 Browser -> Cognito -> JWT
@@ -9,6 +10,7 @@ Frontend/API Gateway -> ALB -> ECS Fargate Order service
 ```
 
 ## Event-driven order flow
+
 ```text
 Order Service
   -> EventBridge: OrderCreated
@@ -21,15 +23,17 @@ Order Service
 ```
 
 ## Data ownership
-| Service | Primary store | Ownership |
-|---|---|---|
-| Catalogue | DynamoDB Products, S3 product assets | Product records and assets |
-| Order | DynamoDB Orders | Order lifecycle |
-| Inventory | DynamoDB Inventory | Stock and reservations |
-| Notification | DynamoDB Notifications or logs | Notification state |
-| Shared technical | DynamoDB ProcessedEvents | Idempotency only |
+
+| Service          | Primary store                        | Ownership                  |
+| ---------------- | ------------------------------------ | -------------------------- |
+| Catalogue        | DynamoDB Products, S3 product assets | Product records and assets |
+| Order            | DynamoDB Orders                      | Order lifecycle            |
+| Inventory        | DynamoDB Inventory                   | Stock and reservations     |
+| Notification     | DynamoDB Notifications or logs       | Notification state         |
+| Shared technical | DynamoDB ProcessedEvents             | Idempotency only           |
 
 ## Network
+
 - One VPC in the primary region spanning two Availability Zones.
 - Public subnets: ALB and NAT gateways.
 - Private subnets: ECS tasks and any VPC-connected workloads.
@@ -37,6 +41,7 @@ Order Service
 - Security groups allow ALB-to-ECS traffic only on the application port.
 
 ## Resilience
+
 - ECS desired count of at least two tasks across AZs for the final demonstration.
 - SQS DLQs and bounded retries.
 - DynamoDB point-in-time recovery in the final environment.
@@ -45,6 +50,7 @@ Order Service
 - Route 53 health-check failover in the DR design.
 
 ## Security
+
 - Cognito User Pool and app client.
 - API Gateway JWT authorizer.
 - Cognito groups: `Customers`, `InventoryManagers`, `Administrators`.
@@ -53,6 +59,7 @@ Order Service
 - CloudFront/WAF and ACM TLS for public endpoints.
 
 ## Observability
+
 - Structured JSON logs in CloudWatch Logs.
 - CloudWatch metrics and dashboards for API Gateway, Lambda, ECS, SQS and DynamoDB.
 - Alarms for API errors, Lambda errors, ECS resource pressure, queue age and DLQ depth.
