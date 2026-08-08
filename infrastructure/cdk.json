@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --esm bin/smartretailx.ts",
+  "app": "node --loader ts-node/esm bin/smartretailx.ts",
   "context": {
     "projectName": "SmartRetailX",
     "environment": "dev",
