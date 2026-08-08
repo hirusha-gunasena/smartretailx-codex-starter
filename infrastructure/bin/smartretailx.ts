@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
+import { CatalogueStack } from '../lib/catalogue-stack.js';
 import { FoundationStack } from '../lib/foundation-stack.js';
 
 const app = new cdk.App();
@@ -13,4 +14,10 @@ new FoundationStack(app, `${projectName}-${environment}-Foundation`, {
     Environment: environment,
     ManagedBy: 'CDK',
   },
+});
+
+new CatalogueStack(app, `${projectName}-${environment}-Catalogue`, {
+  description: 'SmartRetailX Product Catalogue infrastructure',
+  projectName,
+  environmentName: environment,
 });
