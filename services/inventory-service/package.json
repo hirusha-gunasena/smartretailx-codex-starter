@@ -1,0 +1,11 @@
+{
+  "name": "@smartretailx/inventory-service",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"Not implemented yet\"",
+    "lint": "echo \"Not implemented yet\"",
+    "typecheck": "echo \"Not implemented yet\"",
+    "test": "echo \"Not implemented yet\""
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "app": "npx ts-node --esm bin/smartretailx.ts",
+  "context": {
+    "projectName": "SmartRetailX",
+    "environment": "dev",
+    "primaryRegion": "ap-south-1"
+  }
+}
