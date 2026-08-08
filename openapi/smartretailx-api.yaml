@@ -12,15 +12,31 @@ paths:
       responses:
         '200':
           description: Products returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductListSuccessResponse'
     post:
       summary: Create a product
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
       responses:
         '201':
           description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSuccessResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '403':
           $ref: '#/components/responses/Forbidden'
   /products/{productId}:
@@ -36,15 +52,34 @@ paths:
       responses:
         '200':
           description: Product returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSuccessResponse'
         '404':
           $ref: '#/components/responses/NotFound'
-    put:
-      summary: Update a product
+    patch:
+      summary: Partially update a product
+      description: PATCH intentionally replaces PUT because UpdateProductRequest is a partial update contract.
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
       responses:
         '200':
           description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductSuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Delete a product
       security:
@@ -52,6 +87,8 @@ paths:
       responses:
         '204':
           description: Product deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
   /orders:
     post:
       summary: Create an order
@@ -106,6 +143,107 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    Product:
+      type: object
+      additionalProperties: false
+      required: [productId, name, price, currency, createdAt, updatedAt]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        price:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        imageUrl:
+          type: string
+          format: uri
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateProductRequest:
+      type: object
+      additionalProperties: false
+      required: [name, price, currency]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        price:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        imageUrl:
+          type: string
+          format: uri
+    UpdateProductRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        price:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+        imageUrl:
+          type: string
+          format: uri
+    ProductSuccessResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, requestId]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: '#/components/schemas/Product'
+        requestId:
+          type: string
+    ProductListSuccessResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, requestId]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        requestId:
+          type: string
     ErrorResponse:
       type: object
       required: [success, error, requestId]
@@ -138,6 +276,12 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     NotFound:
       description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Resource conflict
       content:
         application/json:
           schema:

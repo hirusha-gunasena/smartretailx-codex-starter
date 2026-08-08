@@ -9,9 +9,11 @@ const currencySchema = z
 const imageUrlSchema = z.string().url();
 const timestampSchema = z.string().datetime({ offset: true });
 
+export const productIdSchema = z.string().uuid();
+
 export const productSchema = z
   .object({
-    productId: z.string().uuid(),
+    productId: productIdSchema,
     name: productNameSchema,
     description: productDescriptionSchema.optional(),
     price: productPriceSchema,

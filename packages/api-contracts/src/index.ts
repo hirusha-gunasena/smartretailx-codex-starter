@@ -1,6 +1,7 @@
 export {
   createProductRequestSchema,
   orderItemSchema,
+  productIdSchema,
   productSchema,
   updateProductRequestSchema,
 } from './product.js';
