@@ -160,6 +160,6 @@ orders table because cost and latency grow with table size. A future customer-or
 a deliberately designed customer-based access pattern, likely a GSI, together with API pagination.
 Task 007 does not add that GSI.
 
-No DynamoDB table, stream, CDK infrastructure, EventBridge bus, or other AWS resource is created or
-changed by this task. The code is ready for a separately reviewed infrastructure task to wire the
-relay to AWS.
+The Task 009 CDK stack now defines the Orders table, stream, relay Lambda, failure destination, and
+custom EventBridge bus. Those definitions have not been deployed, and downstream Inventory routing
+remains intentionally absent.

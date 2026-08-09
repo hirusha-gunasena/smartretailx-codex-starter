@@ -2,6 +2,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { CatalogueStack } from '../lib/catalogue-stack.js';
 import { FoundationStack } from '../lib/foundation-stack.js';
+import { OrderEventsStack } from '../lib/order-events-stack.js';
 
 const app = new cdk.App();
 const projectName = app.node.tryGetContext('projectName') ?? 'SmartRetailX';
@@ -18,6 +19,12 @@ new FoundationStack(app, `${projectName}-${environment}-Foundation`, {
 
 new CatalogueStack(app, `${projectName}-${environment}-Catalogue`, {
   description: 'SmartRetailX Product Catalogue infrastructure',
+  projectName,
+  environmentName: environment,
+});
+
+new OrderEventsStack(app, `${projectName}-${environment}-OrderEvents`, {
+  description: 'SmartRetailX OrderCreated event relay infrastructure',
   projectName,
   environmentName: environment,
 });

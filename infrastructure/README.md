@@ -1,8 +1,8 @@
 # SmartRetailX infrastructure
 
 The CDK application keeps bounded workloads in separate stacks. `FoundationStack` remains the
-repository scaffold, while `CatalogueStack` defines the Task 005 development infrastructure for
-the Product Catalogue API.
+repository scaffold, `CatalogueStack` defines the Product Catalogue API, and `OrderEventsStack`
+defines the reliable `OrderCreated` relay infrastructure.
 
 ## CatalogueStack
 
@@ -40,6 +40,46 @@ The HTTP API allows the development origin `http://localhost:5173`, the `Content
 | PATCH  | `/api/v1/products/{productId}` |
 | DELETE | `/api/v1/products/{productId}` |
 
+## OrderEventsStack
+
+For the `dev` environment, this stack synthesizes:
+
+- the `smartretailx-orders-dev` DynamoDB table with `orderId` as its string partition key,
+  on-demand billing, Standard table class, default DynamoDB-owned encryption, and no sort key or
+  indexes;
+- a `NEW_IMAGE` DynamoDB Stream, which supplies the complete inserted order required by the relay;
+- the Node.js 22 `smartretailx-order-event-relay-dev` Lambda bundled from
+  `services/order-service/src/order-event-relay.ts` with its application and AWS SDK dependencies;
+- the custom `smartretailx-order-events-dev` EventBridge bus, with no rules or cross-account policy;
+- a seven-day relay log group; and
+- an SQS-managed encrypted relay-failure queue retained for 14 days, plus the repository-required
+  dead-letter queue for that destination.
+
+The stream event source mapping starts at `TRIM_HORIZON` to avoid missing records when the mapping
+is first established. It uses batches of 10, zero additional batching delay,
+`ReportBatchItemFailures`, three retries, batch bisection, and a one-hour maximum record age.
+Exhausted or expired records are preserved in the failure destination for debugging. That queue is
+not the future Inventory queue.
+
+The relay receives only `ORDER_EVENT_BUS_NAME`; it reads each order from the stream and does not need
+table data-plane permissions or `ORDERS_TABLE_NAME`. Its application IAM is limited to
+`DescribeStream`, `GetRecords`, `GetShardIterator`, and `ListStreams` on the Orders stream,
+`events:PutEvents` on the custom bus, and `sqs:SendMessage` on its failure destination. It has no
+`PutItem`, `UpdateItem`, `DeleteItem`, `Scan`, or `Query` permission.
+
+The Lambda is deliberately outside a VPC. DynamoDB Streams, EventBridge, SQS, and CloudWatch do not
+require private application networking for this workload, so no VPC or NAT Gateway is created. The
+stack also creates no ECS, ALB, EC2, RDS, CloudFront, customer-managed KMS key, EventBridge rules,
+or Inventory consumer resources.
+
+Development data is intentionally removable: the table, queues, and log group use `DESTROY`, table
+deletion protection and PITR are disabled, and no Global Table replica is configured. A production
+variant must use `RETAIN`, deletion protection, PITR, longer operational retention, and a reviewed
+Global Tables/disaster-recovery design.
+
+Safe outputs expose the Orders table name and stream ARN, event bus name and ARN, relay function
+name, and relay-failure queue name.
+
 ## Review commands
 
 From the repository root, synthesize without deploying:
@@ -54,7 +94,7 @@ Inspect the local change set, when AWS credentials and bootstrap state are alrea
 npm run cdk:diff
 ```
 
-Task 005 creates infrastructure code only. No deployment has occurred. Production hardening remains
-pending: deletion protection, a `RETAIN` removal policy, point-in-time recovery, disaster-recovery
-configuration, production CORS origins, authentication, X-Ray, alarms, and the later security review
-for customer-managed encryption keys.
+The stacks create infrastructure code only. No deployment has occurred. Production hardening
+remains pending: deletion protection, `RETAIN` policies, point-in-time recovery, disaster-recovery
+configuration, production CORS origins, authentication, X-Ray, alarms, and later encryption-key
+review.
