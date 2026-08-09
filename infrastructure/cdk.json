@@ -3,6 +3,7 @@
   "context": {
     "projectName": "SmartRetailX",
     "environment": "dev",
-    "primaryRegion": "ap-south-1"
+    "primaryRegion": "ap-south-1",
+    "@aws-cdk/core:defaultCrossStackReferences": "strong"
   }
 }

@@ -2,6 +2,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { CatalogueStack } from '../lib/catalogue-stack.js';
 import { FoundationStack } from '../lib/foundation-stack.js';
+import { InventoryStack } from '../lib/inventory-stack.js';
 import { OrderEventsStack } from '../lib/order-events-stack.js';
 
 const app = new cdk.App();
@@ -23,8 +24,15 @@ new CatalogueStack(app, `${projectName}-${environment}-Catalogue`, {
   environmentName: environment,
 });
 
-new OrderEventsStack(app, `${projectName}-${environment}-OrderEvents`, {
+const orderEventsStack = new OrderEventsStack(app, `${projectName}-${environment}-OrderEvents`, {
   description: 'SmartRetailX OrderCreated event relay infrastructure',
   projectName,
   environmentName: environment,
+});
+
+new InventoryStack(app, `${projectName}-${environment}-Inventory`, {
+  description: 'SmartRetailX Inventory consumer infrastructure',
+  projectName,
+  environmentName: environment,
+  orderEventBus: orderEventsStack.eventBus,
 });

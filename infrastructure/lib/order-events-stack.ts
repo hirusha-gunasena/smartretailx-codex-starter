@@ -31,6 +31,8 @@ const findRepositoryRoot = (startPath: string): string => {
 };
 
 export class OrderEventsStack extends cdk.Stack {
+  public readonly eventBus: events.EventBus;
+
   public constructor(scope: Construct, id: string, props: OrderEventsStackProps) {
     super(scope, id, props);
 
@@ -65,7 +67,7 @@ export class OrderEventsStack extends cdk.Stack {
       throw new Error('The Orders table must expose a DynamoDB stream ARN.');
     }
 
-    const orderEventBus = new events.EventBus(this, 'OrderEventBus', {
+    this.eventBus = new events.EventBus(this, 'OrderEventBus', {
       eventBusName: `${resourcePrefix}-order-events-${props.environmentName}`,
       description: 'SmartRetailX order domain events',
     });
@@ -103,7 +105,7 @@ export class OrderEventsStack extends cdk.Stack {
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
       environment: {
-        ORDER_EVENT_BUS_NAME: orderEventBus.eventBusName,
+        ORDER_EVENT_BUS_NAME: this.eventBus.eventBusName,
       },
       logGroup: relayLogGroup,
       projectRoot: repositoryRoot,
@@ -133,7 +135,7 @@ export class OrderEventsStack extends cdk.Stack {
       },
     });
 
-    orderEventBus.grantPutEventsTo(relayFunction);
+    this.eventBus.grantPutEventsTo(relayFunction);
     ordersTable.grantStreamRead(relayFunction);
     new lambda.EventSourceMapping(this, 'OrdersStreamEventSourceMapping', {
       target: relayFunction,
@@ -155,10 +157,10 @@ export class OrderEventsStack extends cdk.Stack {
       value: ordersTableStreamArn,
     });
     new cdk.CfnOutput(this, 'OrderEventBusName', {
-      value: orderEventBus.eventBusName,
+      value: this.eventBus.eventBusName,
     });
     new cdk.CfnOutput(this, 'OrderEventBusArn', {
-      value: orderEventBus.eventBusArn,
+      value: this.eventBus.eventBusArn,
     });
     new cdk.CfnOutput(this, 'OrderEventRelayFunctionName', {
       value: relayFunction.functionName,

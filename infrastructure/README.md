@@ -2,7 +2,8 @@
 
 The CDK application keeps bounded workloads in separate stacks. `FoundationStack` remains the
 repository scaffold, `CatalogueStack` defines the Product Catalogue API, and `OrderEventsStack`
-defines the reliable `OrderCreated` relay infrastructure.
+defines the reliable `OrderCreated` relay infrastructure. `InventoryStack` reuses the Order event
+bus and defines the asynchronous Inventory consumer path.
 
 ## CatalogueStack
 
@@ -79,6 +80,59 @@ Global Tables/disaster-recovery design.
 
 Safe outputs expose the Orders table name and stream ARN, event bus name and ARN, relay function
 name, and relay-failure queue name.
+
+## InventoryStack
+
+For the `dev` environment, this stack synthesizes:
+
+- `smartretailx-inventory-dev`, an on-demand Standard DynamoDB table keyed by string `productId`;
+- `smartretailx-inventory-reservations-dev`, an on-demand Standard DynamoDB table keyed by string
+  `eventId`;
+- the SQS-managed encrypted `smartretailx-inventory-orders-dev` source queue with four-day
+  retention and a 120-second visibility timeout;
+- the SQS-managed encrypted `smartretailx-inventory-orders-dlq-dev` terminal DLQ with 14-day
+  retention and source-queue redrive after five receives;
+- a Node.js 22 Inventory consumer Lambda bundled from
+  `services/inventory-service/src/handler.ts`, with 256 MB memory, a 15-second timeout, and a
+  dedicated seven-day log group;
+- one precise EventBridge rule matching source `smartretailx.order-service` and detail type
+  `OrderCreated`; and
+- the SQS event source mapping, least-privilege policies, queue resource policy, and safe outputs.
+
+The CDK application creates `OrderEventsStack` first and passes its public event-bus construct to
+`InventoryStack`. This produces a cross-stack reference to the existing
+`smartretailx-order-events-dev` bus; the Inventory stack creates no second bus and performs no ARN
+lookup. The SQS target uses the default full-event delivery, so the standard EventBridge envelope
+and nested canonical event reach the Task 010 parser unchanged. The queue policy permits the
+EventBridge service to send only to the Inventory queue and conditions that access on the routing
+rule ARN.
+
+The source queue is a Standard queue because SQS delivery remains at least once and the consumer
+deduplicates with the canonical `eventId`. Its redrive policy sends repeatedly malformed messages
+or exhausted transient failures to the terminal DLQ. A durable `RESERVED`, insufficient-stock
+`REJECTED`, or duplicate outcome is successful processing and is not sent to the DLQ. The event
+source mapping uses batches of 10, zero batching delay, and `ReportBatchItemFailures` so only failed
+SQS message IDs retry.
+
+The Inventory Lambda receives only `INVENTORY_TABLE_NAME` and
+`INVENTORY_RESERVATIONS_TABLE_NAME`. Its DynamoDB policy permits `UpdateItem` only on the Inventory
+table and `GetItem`/`PutItem` only on the Reservations table. The SQS integration grants queue
+consumption on the source queue; the function has no source-queue `SendMessage` or normal
+application access to the DLQ. The EventBridge target helper's queue policy grants scoped
+`SendMessage`, `GetQueueAttributes`, and `GetQueueUrl` to the EventBridge service, conditioned on
+the single rule.
+
+Both tables use DynamoDB-owned encryption, have PITR and deletion protection disabled for dev, and
+use `DESTROY`. They have no sort keys, indexes, or streams, and no seed custom resource exists. The
+Reservations stream and Inventory outcome relay are deliberately deferred to Task 012.
+
+The Lambda is outside a VPC: SQS, DynamoDB, and CloudWatch do not require private application
+networking for this flow, and avoiding a VPC also avoids NAT Gateway cost. No dashboards, alarms,
+customer-managed KMS keys, or unrelated compute/networking resources are included. Production must
+review `RETAIN`, deletion protection, PITR, operational retention, and disaster-recovery settings.
+
+Safe outputs expose both table names, source queue name and URL, DLQ name, function name, and rule
+name. These definitions have not been deployed.
 
 ## Review commands
 

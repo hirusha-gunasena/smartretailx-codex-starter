@@ -17,11 +17,11 @@ Order Service
   -> DynamoDB Stream INSERT records
   -> Order Event Relay Lambda
   -> EventBridge: OrderCreated
-  -> [Task 011 infrastructure pending] OrderCreated rule
-  -> [Task 011 infrastructure pending] Inventory SQS queue and DLQ
-  -> [Task 011 infrastructure pending] Inventory Lambda
-  -> [Task 011 infrastructure pending] DynamoDB Inventory + Inventory Reservations tables
-  -> [future] Reservations stream -> outcome relay
+  -> [Task 011 CDK; not deployed] OrderCreated rule
+  -> [Task 011 CDK; not deployed] Inventory SQS queue and DLQ
+  -> [Task 011 CDK; not deployed] Inventory Lambda
+  -> [Task 011 CDK; not deployed] DynamoDB Inventory + Inventory Reservations tables
+  -> [Task 012 deferred] Reservations stream -> outcome relay
   -> [future] EventBridge: InventoryReserved | InventoryRejected
   -> [future] order-status and notification queues
   -> [future] Order status update + Notification Lambda -> SNS email
@@ -40,7 +40,8 @@ queue. Records older than one hour are sent to that failure path rather than ret
 The relay Lambda is not placed in a VPC: DynamoDB Streams, EventBridge, SQS, and CloudWatch are AWS
 service endpoints, so a VPC and NAT Gateway would add cost without serving a requirement here. Its
 application IAM permits only read access to the Orders stream and `events:PutEvents` on the custom
-order event bus. The Inventory queue and EventBridge routing rules are deliberately deferred.
+order event bus. Task 011 reuses that bus by passing its construct to a separate Inventory stack; it
+does not create or look up another bus.
 
 Task 009 defines this infrastructure in CDK only. It has not been deployed.
 
@@ -53,14 +54,19 @@ durable `REJECTED / INSUFFICIENT_STOCK` outcomes without partial stock changes; 
 conflicts, throttling, and unexpected AWS failures remain retryable.
 
 The consumer returns failed SQS message IDs through `batchItemFailures` and continues processing the
-rest of the batch. Task 011 must configure `ReportBatchItemFailures` on the future SQS event source
-mapping. Inventory outcomes are deliberately not published directly after the transaction. The
-future reliable path is the Inventory Reservations table stream to an outcome relay Lambda and then
-EventBridge, avoiding a database/event-bus dual write.
+rest of the batch. Task 011 configures `ReportBatchItemFailures` on the SQS event source mapping, so
+malformed messages and transient DynamoDB failures retry independently. Durable insufficient-stock
+rejections and duplicate deliveries remain successful SQS processing. Inventory outcomes are
+deliberately not published directly after the transaction. The future reliable path is the
+Inventory Reservations table stream to an outcome relay Lambda and then EventBridge, avoiding a
+database/event-bus dual write.
 
-The OrderCreated routing rule, Inventory queue and DLQ, Inventory Lambda, both Inventory tables,
-event source mapping, IAM, reservation stream, and outcome relay are infrastructure-pending. None of
-the Task 010 Inventory flow has been deployed.
+Task 011 defines the precise OrderCreated rule, full-envelope SQS target, encrypted source queue and
+terminal DLQ, Inventory Lambda, both Inventory tables, event source mapping, and least-privilege IAM.
+The Lambda stays outside a VPC because SQS, DynamoDB, and CloudWatch are regional AWS service
+endpoints and no private resource requires VPC connectivity. The Reservations table has no stream;
+that stream and the Inventory outcome relay remain deferred to Task 012. None of this infrastructure
+has been deployed.
 
 ## Data ownership
 

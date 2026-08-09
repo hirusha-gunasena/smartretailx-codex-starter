@@ -6,12 +6,12 @@ create or deploy Lambda functions, queues, EventBridge rules, DynamoDB tables, o
 
 ## Intended asynchronous flow
 
-The infrastructure-pending delivery path is:
+Task 011 now defines this delivery path in CDK, but it has not been deployed:
 
 ```text
 Order EventBridge bus
-  -> future OrderCreated rule
-  -> future Inventory SQS queue and DLQ
+  -> OrderCreated rule
+  -> Inventory SQS queue and DLQ
   -> Inventory Lambda handler
   -> Inventory and Inventory Reservations DynamoDB tables
 ```
@@ -75,8 +75,8 @@ envelopes, invalid canonical events, or transient persistence failures add that 
 `messageId` to `batchItemFailures`. Successful reservations, durable rejections, and duplicate
 deliveries do not. Processing continues after an individual record fails.
 
-Task 011 infrastructure must enable `ReportBatchItemFailures` on the future SQS event source
-mapping. Without that setting, Lambda will not honor the handler's partial-batch response.
+Task 011 enables `ReportBatchItemFailures` on the SQS event source mapping. Without that setting,
+Lambda would not honor the handler's partial-batch response.
 
 ## Reliable outcome publication
 
@@ -86,7 +86,7 @@ intended later flow is:
 
 ```text
 Inventory Reservations table stream
-  -> future Inventory outcome relay Lambda
+  -> Task 012 Inventory outcome relay Lambda
   -> EventBridge
   -> future Order and Notification consumers
 ```
@@ -113,4 +113,5 @@ npm --workspace @smartretailx/inventory-service test
 ```
 
 Tests use injected clocks, repositories, and document-client mocks. They do not contact AWS or
-require credentials. This Lambda-only service has no Docker requirement.
+require credentials. This Lambda-only service has no Docker requirement. Task 011 adds CDK
+definitions only; no Inventory resources have been deployed.
