@@ -1,4 +1,4 @@
 import { createApp } from './composition/create-app.js';
-import { createSystemDependencies } from './composition/system-dependencies.js';
+import { createInMemoryDependencies } from './composition/system-dependencies.js';
 
-export const app = createApp(createSystemDependencies());
+export const app = createApp(createInMemoryDependencies());

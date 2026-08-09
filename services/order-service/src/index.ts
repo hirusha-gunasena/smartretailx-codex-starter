@@ -1,5 +1,7 @@
 export { createOrderRouter } from './adapters/http/order-controller.js';
 export type { OrderUseCases } from './adapters/http/order-controller.js';
+export { createDynamoDBDocumentClient } from './adapters/dynamodb/dynamodb-client.js';
+export { DynamoDBOrderRepository } from './adapters/dynamodb/dynamodb-order-repository.js';
 export { InMemoryOrderRepository } from './adapters/persistence/in-memory-order-repository.js';
 
 export { CreateOrder } from './application/create-order.js';
@@ -12,11 +14,16 @@ export type { OrderRepository } from './application/ports/order-repository.js';
 
 export { createApp } from './composition/create-app.js';
 export type { OrderAppDependencies } from './composition/create-app.js';
-export { readConfiguration } from './composition/configuration.js';
-export type { OrderServiceConfiguration } from './composition/configuration.js';
+export { readConfiguration, readProductionConfiguration } from './composition/configuration.js';
+export type {
+  OrderServiceConfiguration,
+  ProductionOrderServiceConfiguration,
+} from './composition/configuration.js';
+export { createProductionApp } from './composition/production-composition.js';
 export {
   RandomUuidGenerator,
   SystemClock,
+  createInMemoryDependencies,
   createSystemDependencies,
 } from './composition/system-dependencies.js';
 

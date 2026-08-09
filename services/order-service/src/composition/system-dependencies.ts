@@ -16,8 +16,11 @@ export class RandomUuidGenerator implements IdGenerator {
   }
 }
 
-export const createSystemDependencies = (): OrderAppDependencies => ({
+export const createInMemoryDependencies = (): OrderAppDependencies => ({
   repository: new InMemoryOrderRepository(),
   idGenerator: new RandomUuidGenerator(),
   clock: new SystemClock(),
 });
+
+/** @deprecated Retained for compatibility; this alias always selects in-memory persistence. */
+export const createSystemDependencies = createInMemoryDependencies;

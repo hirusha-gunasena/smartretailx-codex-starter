@@ -1,7 +1,8 @@
 # Order Service
 
-The Order Service is the local, container-ready SmartRetailX order-processing boundary. Task 006
-supports order creation, retrieval, listing, and a lightweight health check without using AWS.
+The Order Service is the container-ready SmartRetailX order-processing boundary. It supports order
+creation, retrieval, listing, and a lightweight health check. Task 007 adds DynamoDB persistence
+code without creating or changing any DynamoDB infrastructure.
 
 ## Architecture
 
@@ -9,11 +10,16 @@ supports order creation, retrieval, listing, and a lightweight health check with
 - `application` contains create, get, and list use cases plus storage, clock, ID, and future event
   publishing ports.
 - `adapters/http` exposes the Express API and maps results and failures to shared response envelopes.
-- `adapters/persistence` supplies an in-memory repository for local development and tests only.
+- `adapters/persistence` supplies an in-memory repository for local development and tests.
+- `adapters/dynamodb` supplies the production persistence adapter and AWS SDK document-client
+  factory without exposing SDK types to the domain or application layers.
 - `composition` wires dependencies and centralizes process configuration.
 
-The `EventPublisher` port is intentionally unused. Task 007 will bind it to the shared
-`OrderCreated` event; Task 006 publishes no events.
+The local entry point explicitly composes `InMemoryOrderRepository`. The separate production entry
+point composes one `DynamoDBClient`, one `DynamoDBDocumentClient`, and one
+`DynamoDBOrderRepository`, then reuses them across requests through the existing order use cases and
+Express application. The `EventPublisher` port remains intentionally unused; Task 007 publishes no
+events.
 
 ## Routes
 
@@ -21,15 +27,16 @@ The `EventPublisher` port is intentionally unused. Task 007 will bind it to the 
 | ------ | ------------------------- | -------------------------- |
 | GET    | `/health`                 | Lightweight process health |
 | POST   | `/api/v1/orders`          | Create a `PENDING` order   |
-| GET    | `/api/v1/orders`          | List locally stored orders |
+| GET    | `/api/v1/orders`          | List stored orders         |
 | GET    | `/api/v1/orders/:orderId` | Retrieve one order         |
 
 Malformed or invalid requests return `400`, unknown valid order IDs return `404`, and unexpected
 failures return a generic `500` without internal details. An invalid order ID path value returns
-`400`. CORS is not enabled in this local service.
+`400`. CORS is not enabled in this service. The health endpoint remains a lightweight process check
+and does not call DynamoDB.
 
-Production order listing will require pagination; Task 006 deliberately returns the complete
-in-memory list.
+The public list contract has no pagination. The DynamoDB adapter therefore follows every scan page
+and returns the collected result.
 
 ## Domain rules
 
@@ -47,12 +54,14 @@ range. A future money contract should use fixed minor units or an explicit decim
 
 ## Configuration
 
-| Variable | Default | Description                         |
-| -------- | ------- | ----------------------------------- |
-| `PORT`   | `3000`  | Listening port from 1 through 65535 |
+| Variable            | Local default | Description                                     |
+| ------------------- | ------------- | ----------------------------------------------- |
+| `PORT`              | `3000`        | Listening port from 1 through 65535             |
+| `ORDERS_TABLE_NAME` | Not used      | Required non-empty name for production DynamoDB |
 
-The server always binds to `0.0.0.0` so it is reachable inside a container. No AWS credentials or
-AWS configuration are read by this service.
+Both servers bind to `0.0.0.0` so they are reachable inside a container. AWS region and credentials
+are not hardcoded; the AWS SDK uses its standard runtime configuration chain. Production
+composition fails before listening when `ORDERS_TABLE_NAME` is missing or empty.
 
 ## Local development and tests
 
@@ -70,11 +79,25 @@ npm --workspace @smartretailx/order-service run build
 npm --workspace @smartretailx/order-service start
 ```
 
-Run its tests with:
+The `start` command is explicitly the in-memory development path and preserves the current Docker
+behavior. To use the production persistence composition after building, set `ORDERS_TABLE_NAME` in
+the runtime environment and run:
+
+```bash
+npm --workspace @smartretailx/order-service run start:production
+```
+
+Production composition does not create a table. It expects an externally provisioned table whose
+partition key is the string attribute `orderId`.
+
+Run the service tests with:
 
 ```bash
 npm --workspace @smartretailx/order-service test
 ```
+
+The DynamoDB unit tests inject a mocked document client and do not contact AWS or require AWS
+credentials.
 
 ## Docker
 
@@ -87,10 +110,16 @@ docker run --rm -p 3000:3000 smartretailx-order-service:dev
 ```
 
 Then request `http://localhost:3000/health`. The multi-stage image compiles TypeScript in the builder,
-installs production dependencies only in the runtime stage, and runs as the non-root `node` user.
+installs production dependencies only in the runtime stage, runs as the non-root `node` user, and
+continues to use the explicit in-memory entry point.
 
-## Future AWS architecture
+## DynamoDB listing limitation
 
-Later bounded tasks will add ECS Fargate behind an ALB, a DynamoDB-owned order repository, and
-EventBridge publishing. None of ECS, ALB, DynamoDB, EventBridge, or any other AWS component is
-implemented or deployed by Task 006.
+Using `ScanCommand` and collecting every page is acceptable for this coursework prototype and
+matches the current unpaginated API contract. It is not the preferred query strategy for a large
+orders table because cost and latency grow with table size. A future customer-order query will need
+a deliberately designed customer-based access pattern, likely a GSI, together with API pagination.
+Task 007 does not add that GSI.
+
+No DynamoDB table, CDK infrastructure, EventBridge publishing, or other AWS resource is created or
+changed by this task. Reliable order-event publication remains a separate future task.
