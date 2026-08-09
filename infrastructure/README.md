@@ -3,7 +3,8 @@
 The CDK application keeps bounded workloads in separate stacks. `FoundationStack` remains the
 repository scaffold, `CatalogueStack` defines the Product Catalogue API, and `OrderEventsStack`
 defines the reliable `OrderCreated` relay infrastructure. `InventoryStack` reuses the Order event
-bus and defines the asynchronous Inventory consumer path.
+bus and defines the asynchronous Inventory consumer path. `OrderWorkflowStack` reuses that bus and
+the existing Orders table for the Order-side inventory-outcome Saga transition.
 
 ## CatalogueStack
 
@@ -161,6 +162,58 @@ disaster-recovery settings.
 
 Safe outputs additionally expose the Reservations stream ARN, outcome relay function name, and
 relay failure queue names. These definitions have not been deployed.
+
+## OrderWorkflowStack
+
+Task 015 defines CDK infrastructure for the Task 014 Order-side participant in the
+choreography-based Saga:
+
+```text
+Existing SmartRetailX EventBridge bus
+  -> InventoryReserved | InventoryRejected rule
+  -> Order Workflow SQS queue
+  -> Order Workflow Lambda
+  -> Existing Orders DynamoDB table
+```
+
+The CDK application creates `OrderEventsStack` first and passes its public EventBridge bus and
+Orders table constructs into `OrderWorkflowStack`. Strong cross-stack references preserve one
+custom bus and one Orders table; this stack creates neither resource and performs no ARN or table
+name lookup.
+
+The single rule matches source `smartretailx.inventory-service` and exactly the detail types
+`InventoryReserved` and `InventoryRejected`. Its SQS target has no input path or transformer, so the
+complete EventBridge envelope reaches the Task 014 parser. The generated queue resource policy
+allows the EventBridge service to send to this source queue under a condition scoped to that rule
+ARN; it grants no wildcard SQS access or DLQ delivery.
+
+The Standard `smartretailx-order-workflow-dev` queue uses SQS-managed encryption, four-day
+retention, a 120-second visibility timeout, and redrive after five receives. Its terminal Standard
+DLQ uses SQS-managed encryption and 14-day retention without another DLQ. This redrive path handles
+events successfully delivered to SQS that repeatedly fail application processing; EventBridge
+target-delivery failures are outside Task 015.
+
+The Node.js 22 `smartretailx-order-workflow-dev` Lambda is bundled from
+`services/order-service/src/order-workflow-handler.ts` with repository-root dependency resolution.
+It has 256 MB memory, a 15-second timeout, a dedicated seven-day log group, and only
+`ORDERS_TABLE_NAME` in its application environment. Its DynamoDB policy is scoped to the existing
+Orders table and permits only `GetItem` and `UpdateItem`. The SQS integration adds the required
+source-queue consumer operations but no `SendMessage` or terminal-DLQ application access.
+
+The event source mapping uses batches of 10, zero added batching delay, and
+`ReportBatchItemFailures`. Consequently, Task 014's `UPDATED` and `ALREADY_APPLIED` outcomes
+succeed, while malformed messages, missing orders, contradictory terminal outcomes, and transient
+DynamoDB failures retry individually and can eventually reach the terminal DLQ. The Lambda has no
+asynchronous Lambda DLQ or destination because SQS redrive is the failure mechanism.
+
+The Lambda remains outside a VPC because SQS, DynamoDB, EventBridge, and CloudWatch do not require
+private application networking for this workload. The stack adds no NAT Gateway, expensive
+always-on service, customer-managed KMS key, dashboard, alarm, or X-Ray configuration. It also has
+no EventBridge publishing permission: the Orders record remains the durable source of truth, while
+`OrderConfirmed`/`OrderRejected` publication from a later status-stream relay is deferred.
+
+Safe outputs expose the workflow queue name and URL, DLQ name, Lambda name, and routing-rule name.
+The Task 015 infrastructure definition has not been deployed.
 
 ## Review commands
 

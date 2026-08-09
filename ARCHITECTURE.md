@@ -24,7 +24,7 @@ Order Service
   -> [Task 013 CDK; not deployed] Inventory Reservations NEW_IMAGE DynamoDB Stream
   -> [Task 012 code + Task 013 CDK; not deployed] Inventory Outcome Relay
   -> Existing SmartRetailX EventBridge bus: InventoryReserved | InventoryRejected
-       +--> [Task 014 code only; infrastructure not deployed] Order Workflow Consumer
+       +--> [Task 014 code + Task 015 CDK; not deployed] Order Workflow Consumer
               -> Existing Orders table: PENDING -> CONFIRMED | REJECTED
        +--> [future] Notification consumer
 ```
@@ -120,9 +120,32 @@ compensation are not implemented, and this is not a centralized Saga orchestrato
 
 Task 014 does not directly publish `OrderConfirmed` or `OrderRejected`; the Orders record remains
 the durable source of truth, avoiding another database/event-bus dual write. A later Orders Stream
-status relay may produce those terminal events from `MODIFY` records. Task 015 must create the
-future EventBridge rule, Order Workflow SQS queue and DLQ, Lambda, least-privilege IAM, and an event
-source mapping with `ReportBatchItemFailures`. No Task 014 infrastructure has been deployed.
+status relay may produce those terminal events from `MODIFY` records. Task 015 defines the
+EventBridge rule, Order Workflow SQS queue and DLQ, Lambda, least-privilege IAM, and event source
+mapping with `ReportBatchItemFailures`; those definitions are described below and remain
+undeployed.
+
+Task 015 defines that Order workflow infrastructure in CDK without deploying it. `OrderEventsStack`
+continues to own the single Orders table and custom EventBridge bus; the dedicated
+`OrderWorkflowStack` consumes both through strong cross-stack references. One rule on that existing
+bus matches only source `smartretailx.inventory-service` and detail types `InventoryReserved` and
+`InventoryRejected`, then passes the complete EventBridge envelope to the Standard Order Workflow
+SQS queue without transformation.
+
+The source queue uses SQS-managed encryption, four-day retention, a 120-second visibility timeout,
+and redrive after five receives to a terminal 14-day DLQ. That DLQ handles messages that EventBridge
+successfully placed on SQS but the application repeatedly failed to process; it is not an
+EventBridge target-delivery failure queue. The SQS event source mapping processes batches of 10 with
+no added batching delay and enables `ReportBatchItemFailures`, preserving Task 014's per-message
+retry behavior under at-least-once delivery.
+
+The Node.js 22 workflow Lambda has 256 MB memory, a 15-second timeout, seven-day logs, and only the
+existing Orders table name in its application environment. Its table-scoped application IAM allows
+only `GetItem` and `UpdateItem`; the SQS integration adds source-queue consumer operations without
+`SendMessage` or terminal-DLQ access. The Lambda remains outside a VPC because SQS, DynamoDB,
+EventBridge, and CloudWatch are regional service endpoints and no private resource is required.
+It has no EventBridge publication permission, so `OrderConfirmed`/`OrderRejected` publication and
+the Orders status-stream relay remain deferred. No Task 015 resource has been deployed.
 
 ## Data ownership
 

@@ -2,8 +2,8 @@
 
 The Order Service is the container-ready SmartRetailX order-processing boundary. It supports order
 creation, retrieval, listing, and a lightweight health check. It also contains the Task 008 order
-event relay and Task 014 order workflow consumer code without creating or changing any AWS
-infrastructure.
+event relay and Task 014 order workflow consumer code. Task 015 defines the consumer's AWS
+infrastructure separately in CDK; none of it has been deployed.
 
 ## Architecture
 
@@ -72,13 +72,13 @@ composition independently fails when `ORDER_EVENT_BUS_NAME` is missing or empty.
 ## Order workflow Saga consumer
 
 Task 014 adds application and adapter code for the Order-side participant in the choreography-based
-Saga. It does not add or deploy its future EventBridge rule, SQS queue, DLQ, Lambda, event source
-mapping, IAM policy, or any other AWS resource. The intended asynchronous path is:
+Saga. Task 015 now defines—but does not deploy—the EventBridge rule, SQS queue, DLQ, Lambda, event
+source mapping, IAM policy, logs, and outputs for this path:
 
 ```text
 InventoryReserved | InventoryRejected on EventBridge
-  -> future Order Workflow SQS queue
-  -> future Order Workflow Lambda
+  -> Order Workflow SQS queue
+  -> Order Workflow Lambda
   -> existing Orders DynamoDB table
 ```
 
@@ -101,9 +101,17 @@ conflict: the order is never flipped, and the message remains eligible for retry
 because it represents an inconsistent Saga outcome requiring investigation.
 
 The SQS handler processes records independently and returns failed SQS `messageId` values through
-`batchItemFailures`; successful updates and safe duplicates are omitted. Task 015 must explicitly
-configure the future event source mapping with `ReportBatchItemFailures`—the response shape alone
-does not enable partial retries.
+`batchItemFailures`; successful updates and safe duplicates are omitted. Task 015 explicitly
+configures the event source mapping with `ReportBatchItemFailures`; the response shape alone would
+not enable partial retries. The source queue retries failed messages and sends them to its terminal
+DLQ after five receives. This is an application-processing redrive path, not an EventBridge
+target-delivery failure queue.
+
+The workflow Lambda receives only `ORDERS_TABLE_NAME`. Its table-scoped application IAM permits
+only DynamoDB `GetItem` and `UpdateItem`, while the SQS integration supplies narrow source-queue
+consumer permissions. It has no source-queue send permission, terminal-DLQ application access,
+EventBridge environment variable, or EventBridge publishing permission. The Lambda stays outside
+a VPC because its required AWS services do not require private networking.
 
 The consumer does not publish `OrderConfirmed` or `OrderRejected`. The updated Order is the durable
 source of truth, avoiding a DynamoDB/EventBridge dual write. A later, separately designed Orders

@@ -32,6 +32,7 @@ const findRepositoryRoot = (startPath: string): string => {
 
 export class OrderEventsStack extends cdk.Stack {
   public readonly eventBus: events.EventBus;
+  public readonly ordersTable: dynamodb.TableV2;
 
   public constructor(scope: Construct, id: string, props: OrderEventsStackProps) {
     super(scope, id, props);
@@ -46,7 +47,7 @@ export class OrderEventsStack extends cdk.Stack {
     cdk.Tags.of(this).add('Owner', props.projectName);
     cdk.Tags.of(this).add('ManagedBy', 'CDK');
 
-    const ordersTable = new dynamodb.TableV2(this, 'OrdersTable', {
+    this.ordersTable = new dynamodb.TableV2(this, 'OrdersTable', {
       tableName: `${resourcePrefix}-orders-${props.environmentName}`,
       partitionKey: {
         name: 'orderId',
@@ -62,6 +63,7 @@ export class OrderEventsStack extends cdk.Stack {
       encryption: dynamodb.TableEncryptionV2.dynamoOwnedKey(),
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
+    const ordersTable = this.ordersTable;
     const ordersTableStreamArn = ordersTable.tableStreamArn;
     if (ordersTableStreamArn === undefined) {
       throw new Error('The Orders table must expose a DynamoDB stream ARN.');
