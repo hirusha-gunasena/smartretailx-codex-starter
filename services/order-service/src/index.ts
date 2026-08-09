@@ -2,6 +2,27 @@ export { createOrderRouter } from './adapters/http/order-controller.js';
 export type { OrderUseCases } from './adapters/http/order-controller.js';
 export { createDynamoDBDocumentClient } from './adapters/dynamodb/dynamodb-client.js';
 export { DynamoDBOrderRepository } from './adapters/dynamodb/dynamodb-order-repository.js';
+export {
+  OrderStreamRecordError,
+  createOrderCreatedEventId,
+  mapOrderStreamRecord,
+} from './adapters/events/dynamodb-order-stream-mapper.js';
+export {
+  EventBridgeEventPublisher,
+  EventPublicationError,
+} from './adapters/events/eventbridge-event-publisher.js';
+export {
+  createEventRelayHandler,
+  createEventRelayHandlerFromEnvironment,
+} from './adapters/events/event-relay-composition.js';
+export { readEventRelayConfiguration } from './adapters/events/event-relay-configuration.js';
+export type { EventRelayConfiguration } from './adapters/events/event-relay-configuration.js';
+export {
+  UnreportableStreamRecordFailureError,
+  createOrderCreatedRelayHandler,
+  processOrderStreamRecord,
+} from './adapters/events/order-created-relay-handler.js';
+export type { OrderCreatedRelayHandler } from './adapters/events/order-created-relay-handler.js';
 export { InMemoryOrderRepository } from './adapters/persistence/in-memory-order-repository.js';
 
 export { CreateOrder } from './application/create-order.js';

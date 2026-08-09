@@ -13,6 +13,9 @@ Frontend/API Gateway -> ALB -> ECS Fargate Order service
 
 ```text
 Order Service
+  -> DynamoDB Orders table
+  -> DynamoDB Stream INSERT records
+  -> Order Event Relay Lambda
   -> EventBridge: OrderCreated
   -> SQS order-events queue
   -> Inventory Lambda
@@ -21,6 +24,16 @@ Order Service
   -> SQS order-status queue and notification queue
   -> Order status update + Notification Lambda -> SNS email
 ```
+
+The Order API persists only; it does not directly publish to EventBridge because that would create a
+dual-write consistency gap. The relay uses DynamoDB Streams change data capture so an accepted order
+can be retried independently. Stream delivery is at least once, so `OrderCreated` IDs are derived
+deterministically from event type and order ID, and every downstream consumer must be idempotent.
+Only `INSERT` records create events. The future Lambda event source mapping must enable
+`ReportBatchItemFailures` so successfully processed stream records are not retried with failed ones.
+
+The relay, stream, event source mapping, event bus, and associated IAM resources are documented
+future infrastructure; Task 008 implements their application boundary only.
 
 ## Data ownership
 

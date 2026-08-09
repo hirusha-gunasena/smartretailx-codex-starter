@@ -4,20 +4,25 @@ WORKDIR /workspace
 
 COPY package.json package-lock.json ./
 COPY packages/api-contracts/package.json ./packages/api-contracts/package.json
+COPY packages/event-contracts/package.json ./packages/event-contracts/package.json
 COPY services/order-service/package.json ./services/order-service/package.json
 
 RUN npm ci \
     --workspace @smartretailx/api-contracts \
+    --workspace @smartretailx/event-contracts \
     --workspace @smartretailx/order-service \
     --include-workspace-root=false
 
 COPY tsconfig.base.json ./tsconfig.base.json
 COPY packages/api-contracts/tsconfig.json packages/api-contracts/tsconfig.build.json ./packages/api-contracts/
 COPY packages/api-contracts/src ./packages/api-contracts/src
+COPY packages/event-contracts/tsconfig.json packages/event-contracts/tsconfig.build.json ./packages/event-contracts/
+COPY packages/event-contracts/src ./packages/event-contracts/src
 COPY services/order-service/tsconfig.json services/order-service/tsconfig.build.json ./services/order-service/
 COPY services/order-service/src ./services/order-service/src
 
 RUN npm --workspace @smartretailx/api-contracts run build \
+    && npm --workspace @smartretailx/event-contracts run build \
     && npm --workspace @smartretailx/order-service run build
 
 FROM node:22-bookworm-slim AS runtime
@@ -29,15 +34,18 @@ WORKDIR /workspace
 
 COPY package.json package-lock.json ./
 COPY packages/api-contracts/package.json ./packages/api-contracts/package.json
+COPY packages/event-contracts/package.json ./packages/event-contracts/package.json
 COPY services/order-service/package.json ./services/order-service/package.json
 
 RUN npm ci --omit=dev \
     --workspace @smartretailx/api-contracts \
+    --workspace @smartretailx/event-contracts \
     --workspace @smartretailx/order-service \
     --include-workspace-root=false \
     && npm cache clean --force
 
 COPY --from=builder /workspace/packages/api-contracts/dist ./packages/api-contracts/dist
+COPY --from=builder /workspace/packages/event-contracts/dist ./packages/event-contracts/dist
 COPY --from=builder /workspace/services/order-service/dist ./services/order-service/dist
 
 USER node

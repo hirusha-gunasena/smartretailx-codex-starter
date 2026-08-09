@@ -1,25 +1,27 @@
 # Order Service
 
 The Order Service is the container-ready SmartRetailX order-processing boundary. It supports order
-creation, retrieval, listing, and a lightweight health check. Task 007 adds DynamoDB persistence
-code without creating or changing any DynamoDB infrastructure.
+creation, retrieval, listing, and a lightweight health check. It also contains the Task 008 order
+event relay code without creating or changing any AWS infrastructure.
 
 ## Architecture
 
 - `domain` owns order validation, status, typed errors, immutable snapshots, and total calculation.
-- `application` contains create, get, and list use cases plus storage, clock, ID, and future event
-  publishing ports.
+- `application` contains create, get, and list use cases plus storage, clock, ID, and event publishing
+  ports.
 - `adapters/http` exposes the Express API and maps results and failures to shared response envelopes.
 - `adapters/persistence` supplies an in-memory repository for local development and tests.
 - `adapters/dynamodb` supplies the production persistence adapter and AWS SDK document-client
   factory without exposing SDK types to the domain or application layers.
+- `adapters/events` maps order stream records, publishes canonical events, and handles partial batch
+  failures without exposing AWS SDK types to the domain or application layers.
 - `composition` wires dependencies and centralizes process configuration.
 
 The local entry point explicitly composes `InMemoryOrderRepository`. The separate production entry
 point composes one `DynamoDBClient`, one `DynamoDBDocumentClient`, and one
 `DynamoDBOrderRepository`, then reuses them across requests through the existing order use cases and
-Express application. The `EventPublisher` port remains intentionally unused; Task 007 publishes no
-events.
+Express application. The separate event-relay entry point composes its EventBridge publisher once
+for reuse by a future Lambda runtime.
 
 ## Routes
 
@@ -54,14 +56,16 @@ range. A future money contract should use fixed minor units or an explicit decim
 
 ## Configuration
 
-| Variable            | Local default | Description                                     |
-| ------------------- | ------------- | ----------------------------------------------- |
-| `PORT`              | `3000`        | Listening port from 1 through 65535             |
-| `ORDERS_TABLE_NAME` | Not used      | Required non-empty name for production DynamoDB |
+| Variable               | Local default | Description                                     |
+| ---------------------- | ------------- | ----------------------------------------------- |
+| `PORT`                 | `3000`        | Listening port from 1 through 65535             |
+| `ORDERS_TABLE_NAME`    | Not used      | Required non-empty name for production DynamoDB |
+| `ORDER_EVENT_BUS_NAME` | Not used      | Required only by the production event relay     |
 
 Both servers bind to `0.0.0.0` so they are reachable inside a container. AWS region and credentials
 are not hardcoded; the AWS SDK uses its standard runtime configuration chain. Production
-composition fails before listening when `ORDERS_TABLE_NAME` is missing or empty.
+composition fails before listening when `ORDERS_TABLE_NAME` is missing or empty. Event-relay
+composition independently fails when `ORDER_EVENT_BUS_NAME` is missing or empty.
 
 ## Local development and tests
 
@@ -99,10 +103,45 @@ npm --workspace @smartretailx/order-service test
 The DynamoDB unit tests inject a mocked document client and do not contact AWS or require AWS
 credentials.
 
+## Reliable OrderCreated relay
+
+`CreateOrder` deliberately writes only the order. Writing DynamoDB and then directly publishing to
+EventBridge would be a dual write: either operation could succeed while the other fails, leaving the
+system inconsistent. The selected change-data-capture path is:
+
+```text
+Orders DynamoDB table
+  -> DynamoDB Stream INSERT
+  -> Order Event Relay Lambda
+  -> EventBridge
+```
+
+Only `INSERT` records produce `OrderCreated`; `MODIFY` and `REMOVE` are intentionally ignored. The
+relay requires `NewImage`, unmarshalls and validates it with the shared `Order` schema, requires
+`PENDING` status, and then validates the resulting shared `OrderCreated` contract.
+
+DynamoDB Streams and Lambda are at-least-once systems, so retries and duplicate delivery are
+expected. The relay derives a UUID v5 from the standard URL namespace and
+`smartretailx:OrderCreated:<orderId>`. The same order therefore retains the same event ID on every
+retry. It also uses `orderId` as `correlationId` and `order.createdAt` as `occurredAt`. Downstream
+consumers must remain idempotent and deduplicate by `eventId`.
+
+The EventBridge entry uses source `smartretailx.order-service` for namespaced AWS routing, while the
+shared envelope retains its established source `order-service` for compatibility with the canonical
+contract. A resolved `PutEvents` call is accepted only when its submitted entry did not fail.
+
+The batch handler returns failed stream sequence numbers through `batchItemFailures`, allowing
+successful records to avoid unnecessary retries. A future DynamoDB Streams event source mapping
+must explicitly enable `ReportBatchItemFailures`; this task adds response behavior only. If a failed
+record has no sequence number, the handler throws a typed error because inventing a retry identifier
+would be unsafe.
+
+No stream, relay Lambda, EventBridge bus, trigger, event source mapping, or IAM role exists yet.
+
 ## Docker
 
-Because the service consumes the shared API-contract workspace, build from the repository root so
-Docker can copy both workspaces:
+Because the service consumes both shared contract workspaces, build from the repository root so
+Docker can copy all required workspaces:
 
 ```bash
 docker build -f services/order-service/Dockerfile -t smartretailx-order-service:dev .
@@ -121,5 +160,6 @@ orders table because cost and latency grow with table size. A future customer-or
 a deliberately designed customer-based access pattern, likely a GSI, together with API pagination.
 Task 007 does not add that GSI.
 
-No DynamoDB table, CDK infrastructure, EventBridge publishing, or other AWS resource is created or
-changed by this task. Reliable order-event publication remains a separate future task.
+No DynamoDB table, stream, CDK infrastructure, EventBridge bus, or other AWS resource is created or
+changed by this task. The code is ready for a separately reviewed infrastructure task to wire the
+relay to AWS.
