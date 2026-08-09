@@ -23,7 +23,9 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1106.0",
+    "@aws-sdk/client-eventbridge": "^3.1106.0",
     "@aws-sdk/lib-dynamodb": "^3.1106.0",
+    "@aws-sdk/util-dynamodb": "^3.996.7",
     "@smartretailx/api-contracts": "0.1.0",
     "@smartretailx/event-contracts": "0.1.0",
     "zod": "^4.0.0"

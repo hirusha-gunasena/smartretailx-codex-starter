@@ -21,10 +21,11 @@ Order Service
   -> [Task 011 CDK; not deployed] Inventory SQS queue and DLQ
   -> [Task 011 CDK; not deployed] Inventory Lambda
   -> [Task 011 CDK; not deployed] DynamoDB Inventory + Inventory Reservations tables
-  -> [Task 012 deferred] Reservations stream -> outcome relay
-  -> [future] EventBridge: InventoryReserved | InventoryRejected
-  -> [future] order-status and notification queues
-  -> [future] Order status update + Notification Lambda -> SNS email
+  -> [Task 013 infrastructure pending] Inventory Reservations DynamoDB Stream
+  -> [Task 012 code; Task 013 Lambda resource pending] Inventory Outcome Relay
+  -> Existing SmartRetailX EventBridge bus: InventoryReserved | InventoryRejected
+       +--> [future] Order workflow consumer
+       +--> [future] Notification consumer
 ```
 
 The Order API persists only; it does not directly publish to EventBridge because that would create a
@@ -57,16 +58,29 @@ The consumer returns failed SQS message IDs through `batchItemFailures` and cont
 rest of the batch. Task 011 configures `ReportBatchItemFailures` on the SQS event source mapping, so
 malformed messages and transient DynamoDB failures retry independently. Durable insufficient-stock
 rejections and duplicate deliveries remain successful SQS processing. Inventory outcomes are
-deliberately not published directly after the transaction. The future reliable path is the
-Inventory Reservations table stream to an outcome relay Lambda and then EventBridge, avoiding a
-database/event-bus dual write.
+deliberately not published directly after the transaction, avoiding a database/event-bus dual
+write.
 
 Task 011 defines the precise OrderCreated rule, full-envelope SQS target, encrypted source queue and
 terminal DLQ, Inventory Lambda, both Inventory tables, event source mapping, and least-privilege IAM.
 The Lambda stays outside a VPC because SQS, DynamoDB, and CloudWatch are regional AWS service
 endpoints and no private resource requires VPC connectivity. The Reservations table has no stream;
-that stream and the Inventory outcome relay remain deferred to Task 012. None of this infrastructure
-has been deployed.
+that stream and the Inventory outcome relay infrastructure remain deferred to Task 013. None of
+this infrastructure has been deployed.
+
+Task 012 adds the Inventory outcome relay application and adapter code only. A future Reservations
+stream `INSERT` is unmarshalled and validated as the durable `InventoryReservation` source of truth,
+then maps `RESERVED` to canonical `InventoryReserved` and `REJECTED` to canonical
+`InventoryRejected`. The mapping preserves the workflow correlation ID, uses durable `processedAt`
+as `occurredAt`, and derives a deterministic UUID v5 from outcome type and reservation identity.
+This supports at-least-once stream retries; future Order and Notification consumers must also be
+idempotent by canonical event ID.
+
+The relay publishes to the existing custom bus with routing source
+`smartretailx.inventory-service` and returns failed stream sequence numbers through
+`batchItemFailures`. It ignores `MODIFY` and `REMOVE` in code. Task 013 must enable the Reservations
+stream, create the relay Lambda and permissions, and configure its event source mapping with
+`ReportBatchItemFailures`. Task 012 does not create or deploy any AWS resource.
 
 ## Data ownership
 

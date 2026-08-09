@@ -80,16 +80,45 @@ Lambda would not honor the handler's partial-batch response.
 
 ## Reliable outcome publication
 
-Task 010 deliberately does not publish `InventoryReserved` or `InventoryRejected` directly. A
-write followed by EventBridge publication would introduce another dual-write consistency gap. The
-intended later flow is:
+Task 010 continues to persist the durable Reservation outcome without publishing directly to
+EventBridge. A stock write followed by `PutEvents` in that workflow would introduce a database/event
+bus dual-write consistency gap. Task 012 adds the application and adapter code for this separate
+reliable path:
 
 ```text
-Inventory Reservations table stream
-  -> Task 012 Inventory outcome relay Lambda
-  -> EventBridge
-  -> future Order and Notification consumers
+Inventory Lambda
+  -> durable Inventory Reservations record
+  -> [Task 013 infrastructure pending] DynamoDB Stream NEW_IMAGE
+  -> [Task 013 Lambda resource pending] Inventory Outcome Relay
+  -> existing SmartRetailX EventBridge bus
+  -> InventoryReserved | InventoryRejected
+  -> future idempotent consumers
 ```
+
+Only `INSERT` records can emit outcomes; `MODIFY` and `REMOVE` are ignored in code even if future
+infrastructure also filters records. Each inserted image is unmarshalled and validated with the
+existing `InventoryReservation` schema before mapping. A `RESERVED` record uses its requested items
+and durable `eventId` as the canonical reservation identity. A `REJECTED` record uses the stored
+`INSUFFICIENT_STOCK` reason and stored insufficient-item details. Both preserve `correlationId` and
+use `processedAt` as `occurredAt`, so retries do not alter workflow identity or time.
+
+DynamoDB Streams delivery is at least once. The relay therefore derives UUID v5 event IDs in the
+fixed RFC 4122 URL namespace `6ba7b811-9dad-11d1-80b4-00c04fd430c8`, using
+`smartretailx:<outcome-type>:<reservation-eventId>` as the logical name. A retry of the same outcome
+gets the same canonical `eventId`, while reserved and rejected identities cannot collide. Future
+downstream consumers must still be idempotent by canonical event ID because EventBridge and SQS can
+deliver duplicates.
+
+Each stream record is handled independently. Mapping and publication failures return the record's
+DynamoDB sequence number in `batchItemFailures`, and later records continue processing. A failed
+record without a usable sequence number raises an explicit unreportable-record error rather than
+inventing an identifier. Task 013 **must** set the DynamoDB Streams event source mapping function
+response type to `ReportBatchItemFailures`; returning this application response is not sufficient
+by itself.
+
+Task 012 creates no Reservations table stream, relay Lambda resource, event source mapping,
+EventBridge rule, queue, IAM policy, or other AWS resource. Those infrastructure changes remain
+pending for Task 013, and nothing described here has been deployed.
 
 ## Runtime configuration
 
@@ -99,6 +128,16 @@ The production handler requires:
 INVENTORY_TABLE_NAME
 INVENTORY_RESERVATIONS_TABLE_NAME
 ```
+
+The separate Inventory outcome relay production entry point requires:
+
+```text
+INVENTORY_EVENT_BUS_NAME
+```
+
+This relay-only variable is read by relay composition and is not required by the existing Inventory
+SQS consumer or its tests. Relay composition creates one `EventBridgeClient` per Lambda execution
+environment and reuses it for all records.
 
 Production composition creates one `DynamoDBDocumentClient` per Lambda execution environment with
 `removeUndefinedValues: true`; it does not construct a client per message. The SDK selects its
@@ -112,6 +151,7 @@ npm --workspace @smartretailx/inventory-service run build
 npm --workspace @smartretailx/inventory-service test
 ```
 
-Tests use injected clocks, repositories, and document-client mocks. They do not contact AWS or
-require credentials. This Lambda-only service has no Docker requirement. Task 011 adds CDK
-definitions only; no Inventory resources have been deployed.
+Tests use injected clocks, repositories, document-client mocks, and EventBridge-client mocks. They
+do not contact AWS or require credentials. This Lambda-only service has no Docker requirement. Task
+011 adds CDK definitions only; Task 012 adds relay code only; no Inventory resources have been
+deployed.

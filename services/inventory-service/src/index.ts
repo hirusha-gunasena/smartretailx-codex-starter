@@ -1,5 +1,33 @@
 export { createDynamoDBDocumentClient } from './adapters/dynamodb/dynamodb-client.js';
 export { DynamoDBInventoryReservationRepository } from './adapters/dynamodb/dynamodb-inventory-reservation-repository.js';
+export {
+  EventBridgeInventoryEventPublisher,
+  EventPublicationError,
+  INVENTORY_EVENTBRIDGE_SOURCE,
+} from './adapters/events/eventbridge-inventory-event-publisher.js';
+export {
+  INVENTORY_OUTCOME_EVENT_TYPE,
+  INVENTORY_OUTCOME_EVENT_UUID_NAMESPACE,
+  InventoryOutcomeStreamRecordError,
+  createInventoryOutcomeEventId,
+  mapInventoryOutcomeStreamRecord,
+} from './adapters/events/inventory-outcome-stream-mapper.js';
+export type {
+  InventoryOutcomeEvent,
+  InventoryOutcomeEventType,
+} from './adapters/events/inventory-outcome-stream-mapper.js';
+export {
+  createInventoryOutcomeRelay,
+  createInventoryOutcomeRelayFromEnvironment,
+} from './adapters/events/inventory-outcome-relay-composition.js';
+export { readInventoryOutcomeRelayConfiguration } from './adapters/events/inventory-outcome-relay-configuration.js';
+export type { InventoryOutcomeRelayConfiguration } from './adapters/events/inventory-outcome-relay-configuration.js';
+export {
+  UnreportableStreamRecordFailureError,
+  createInventoryOutcomeRelayHandler,
+  processInventoryOutcomeRecord,
+} from './adapters/events/inventory-outcome-relay-handler.js';
+export type { InventoryOutcomeRelayHandler } from './adapters/events/inventory-outcome-relay-handler.js';
 export { createInventorySqsHandler } from './adapters/sqs/inventory-sqs-handler.js';
 export type {
   InventorySqsHandler,
@@ -12,6 +40,7 @@ export {
   parseOrderCreatedMessage,
 } from './adapters/sqs/order-created-message-parser.js';
 export type { Clock } from './application/ports/clock.js';
+export type { InventoryOutcomeEventPublisher } from './application/ports/inventory-outcome-event-publisher.js';
 export type {
   InventoryReservationRepository,
   InventoryReservationResult,
