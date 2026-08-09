@@ -17,12 +17,14 @@ Order Service
   -> DynamoDB Stream INSERT records
   -> Order Event Relay Lambda
   -> EventBridge: OrderCreated
-  -> SQS order-events queue
-  -> Inventory Lambda
-  -> DynamoDB inventory update
-  -> EventBridge: InventoryReserved | InventoryRejected
-  -> SQS order-status queue and notification queue
-  -> Order status update + Notification Lambda -> SNS email
+  -> [Task 011 infrastructure pending] OrderCreated rule
+  -> [Task 011 infrastructure pending] Inventory SQS queue and DLQ
+  -> [Task 011 infrastructure pending] Inventory Lambda
+  -> [Task 011 infrastructure pending] DynamoDB Inventory + Inventory Reservations tables
+  -> [future] Reservations stream -> outcome relay
+  -> [future] EventBridge: InventoryReserved | InventoryRejected
+  -> [future] order-status and notification queues
+  -> [future] Order status update + Notification Lambda -> SNS email
 ```
 
 The Order API persists only; it does not directly publish to EventBridge because that would create a
@@ -42,13 +44,31 @@ order event bus. The Inventory queue and EventBridge routing rules are deliberat
 
 Task 009 defines this infrastructure in CDK only. It has not been deployed.
 
+Task 010 adds the Inventory consumer application and DynamoDB adapter code only. The consumer
+validates the EventBridge wrapper and nested canonical `OrderCreated` event, aggregates duplicate
+product lines, and uses one DynamoDB transaction for all stock updates plus the durable reservation
+outcome. The canonical event ID is both the reservation key and stable transaction token, so
+at-least-once SQS delivery does not decrement stock twice. Expected stock condition failures become
+durable `REJECTED / INSUFFICIENT_STOCK` outcomes without partial stock changes; transaction
+conflicts, throttling, and unexpected AWS failures remain retryable.
+
+The consumer returns failed SQS message IDs through `batchItemFailures` and continues processing the
+rest of the batch. Task 011 must configure `ReportBatchItemFailures` on the future SQS event source
+mapping. Inventory outcomes are deliberately not published directly after the transaction. The
+future reliable path is the Inventory Reservations table stream to an outcome relay Lambda and then
+EventBridge, avoiding a database/event-bus dual write.
+
+The OrderCreated routing rule, Inventory queue and DLQ, Inventory Lambda, both Inventory tables,
+event source mapping, IAM, reservation stream, and outcome relay are infrastructure-pending. None of
+the Task 010 Inventory flow has been deployed.
+
 ## Data ownership
 
 | Service          | Primary store                        | Ownership                  |
 | ---------------- | ------------------------------------ | -------------------------- |
 | Catalogue        | DynamoDB Products, S3 product assets | Product records and assets |
 | Order            | DynamoDB Orders                      | Order lifecycle            |
-| Inventory        | DynamoDB Inventory                   | Stock and reservations     |
+| Inventory        | DynamoDB Inventory and Reservations  | Stock and durable outcomes |
 | Notification     | DynamoDB Notifications or logs       | Notification state         |
 | Shared technical | DynamoDB ProcessedEvents             | Idempotency only           |
 
