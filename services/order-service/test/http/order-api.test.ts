@@ -79,6 +79,8 @@ describe('Order Service HTTP API', () => {
         status: 'CONFIRMED',
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
+        reservationId: '550e8400-e29b-41d4-a716-446655440015',
+        rejectionReason: 'INSUFFICIENT_STOCK',
       });
 
     expect(response.status).toBe(400);

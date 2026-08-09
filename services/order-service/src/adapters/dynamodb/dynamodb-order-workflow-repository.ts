@@ -35,7 +35,10 @@ export class DynamoDBOrderWorkflowRepository implements OrderWorkflowRepository 
         new UpdateCommand({
           TableName: this.tableName,
           Key: { orderId: transition.orderId },
-          UpdateExpression: 'SET #status = :targetStatus, #updatedAt = :updatedAt',
+          UpdateExpression:
+            transition.targetStatus === 'CONFIRMED'
+              ? 'SET #status = :targetStatus, #updatedAt = :updatedAt, #reservationId = :reservationId REMOVE #rejectionReason'
+              : 'SET #status = :targetStatus, #updatedAt = :updatedAt, #rejectionReason = :rejectionReason REMOVE #reservationId',
           ConditionExpression:
             'attribute_exists(#orderId) AND #status = :pendingStatus AND #createdAt <= :updatedAt',
           ExpressionAttributeNames: {
@@ -43,11 +46,16 @@ export class DynamoDBOrderWorkflowRepository implements OrderWorkflowRepository 
             '#status': 'status',
             '#createdAt': 'createdAt',
             '#updatedAt': 'updatedAt',
+            '#reservationId': 'reservationId',
+            '#rejectionReason': 'rejectionReason',
           },
           ExpressionAttributeValues: {
             ':pendingStatus': 'PENDING',
             ':targetStatus': transition.targetStatus,
             ':updatedAt': transition.updatedAt,
+            ...(transition.targetStatus === 'CONFIRMED'
+              ? { ':reservationId': transition.reservationId }
+              : { ':rejectionReason': transition.rejectionReason }),
           },
         }),
       );
@@ -73,8 +81,28 @@ export class DynamoDBOrderWorkflowRepository implements OrderWorkflowRepository 
 
     const order = orderSchema.parse(output.Item);
 
-    if (order.status === transition.targetStatus) {
-      return ORDER_WORKFLOW_TRANSITION_RESULT.ALREADY_APPLIED;
+    if (order.status === 'CONFIRMED' && transition.targetStatus === 'CONFIRMED') {
+      if (order.reservationId === transition.reservationId) {
+        return ORDER_WORKFLOW_TRANSITION_RESULT.ALREADY_APPLIED;
+      }
+
+      throw new OrderWorkflowConflictError(
+        transition.orderId,
+        order.status,
+        transition.targetStatus,
+      );
+    }
+
+    if (order.status === 'REJECTED' && transition.targetStatus === 'REJECTED') {
+      if (order.rejectionReason === transition.rejectionReason) {
+        return ORDER_WORKFLOW_TRANSITION_RESULT.ALREADY_APPLIED;
+      }
+
+      throw new OrderWorkflowConflictError(
+        transition.orderId,
+        order.status,
+        transition.targetStatus,
+      );
     }
 
     if (order.status !== 'PENDING') {

@@ -12,6 +12,7 @@ import type {
 import { ORDER_ID, SECOND_ORDER_ID } from '../support/fixtures.js';
 import {
   OUTCOME_OCCURRED_AT,
+  RESERVATION_ID,
   inventoryRejectedFixture,
   inventoryReservedFixture,
 } from '../support/inventory-outcome-fixtures.js';
@@ -38,6 +39,7 @@ describe('ProcessInventoryOutcome', () => {
     expect(transitionFromPending).toHaveBeenCalledWith({
       orderId: ORDER_ID,
       targetStatus: 'CONFIRMED',
+      reservationId: RESERVATION_ID,
       updatedAt: OUTCOME_OCCURRED_AT,
     });
   });
@@ -51,17 +53,18 @@ describe('ProcessInventoryOutcome', () => {
     expect(transitionFromPending).toHaveBeenCalledWith({
       orderId: ORDER_ID,
       targetStatus: 'REJECTED',
+      rejectionReason: 'INSUFFICIENT_STOCK',
       updatedAt: OUTCOME_OCCURRED_AT,
     });
   });
 
-  test('uses canonical occurredAt instead of retry processing time', async () => {
+  test('preserves canonical occurredAt exactly instead of using retry processing time', async () => {
     transitionFromPending.mockResolvedValue(ORDER_WORKFLOW_TRANSITION_RESULT.UPDATED);
 
     await processor.execute(inventoryReservedFixture({ occurredAt: '2026-08-09T14:15:00+05:30' }));
 
     expect(transitionFromPending).toHaveBeenCalledWith(
-      expect.objectContaining({ updatedAt: '2026-08-09T08:45:00.000Z' }),
+      expect.objectContaining({ updatedAt: '2026-08-09T14:15:00+05:30' }),
     );
   });
 

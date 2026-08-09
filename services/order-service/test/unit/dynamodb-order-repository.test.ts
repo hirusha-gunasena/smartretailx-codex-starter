@@ -3,7 +3,13 @@ import { GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { jest } from '@jest/globals';
 import { DynamoDBOrderRepository } from '../../src/index.js';
-import { ORDER_ID, SECOND_ORDER_ID, orderFixture } from '../support/fixtures.js';
+import {
+  ORDER_ID,
+  SECOND_ORDER_ID,
+  confirmedOrderFixture,
+  orderFixture,
+  rejectedOrderFixture,
+} from '../support/fixtures.js';
 
 const TABLE_NAME = 'OrdersTable';
 
@@ -81,6 +87,18 @@ describe('DynamoDBOrderRepository', () => {
     await expect(repository.findById(ORDER_ID)).resolves.toEqual(orderFixture());
   });
 
+  test('findById returns a valid CONFIRMED order with durable reservationId', async () => {
+    send.mockResolvedValue({ Item: confirmedOrderFixture() });
+
+    await expect(repository.findById(ORDER_ID)).resolves.toEqual(confirmedOrderFixture());
+  });
+
+  test('findById returns a valid REJECTED order with durable rejectionReason', async () => {
+    send.mockResolvedValue({ Item: rejectedOrderFixture() });
+
+    await expect(repository.findById(ORDER_ID)).resolves.toEqual(rejectedOrderFixture());
+  });
+
   test('findById returns null when the order is absent', async () => {
     send.mockResolvedValue({});
 
@@ -89,6 +107,18 @@ describe('DynamoDBOrderRepository', () => {
 
   test('findById rejects a corrupted stored order', async () => {
     send.mockResolvedValue({ Item: { ...orderFixture(), orderId: 'corrupted-id' } });
+
+    await expect(repository.findById(ORDER_ID)).rejects.toThrow();
+  });
+
+  test('findById rejects a CONFIRMED order without reservationId', async () => {
+    send.mockResolvedValue({ Item: { ...orderFixture(), status: 'CONFIRMED' } });
+
+    await expect(repository.findById(ORDER_ID)).rejects.toThrow();
+  });
+
+  test('findById rejects a REJECTED order without rejectionReason', async () => {
+    send.mockResolvedValue({ Item: { ...orderFixture(), status: 'REJECTED' } });
 
     await expect(repository.findById(ORDER_ID)).rejects.toThrow();
   });

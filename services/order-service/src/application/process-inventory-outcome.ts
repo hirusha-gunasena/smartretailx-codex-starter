@@ -7,13 +7,9 @@ import { OrderWorkflowValidationError } from '../domain/errors.js';
 import type {
   OrderWorkflowRepository,
   OrderWorkflowTransitionResult,
-  OrderWorkflowTargetStatus,
 } from './ports/order-workflow-repository.js';
 
 export type InventoryOutcomeEvent = InventoryReservedEvent | InventoryRejectedEvent;
-
-const targetStatusFor = (event: InventoryOutcomeEvent): OrderWorkflowTargetStatus =>
-  event.eventType === 'InventoryReserved' ? 'CONFIRMED' : 'REJECTED';
 
 const validateCanonicalEvent = (event: InventoryOutcomeEvent): InventoryOutcomeEvent =>
   event.eventType === 'InventoryReserved'
@@ -34,10 +30,20 @@ export class ProcessInventoryOutcome {
       );
     }
 
+    if (canonicalEvent.eventType === 'InventoryReserved') {
+      return this.repository.transitionFromPending({
+        orderId,
+        targetStatus: 'CONFIRMED',
+        reservationId: canonicalEvent.data.reservationId,
+        updatedAt: canonicalEvent.occurredAt,
+      });
+    }
+
     return this.repository.transitionFromPending({
       orderId,
-      targetStatus: targetStatusFor(canonicalEvent),
-      updatedAt: new Date(canonicalEvent.occurredAt).toISOString(),
+      targetStatus: 'REJECTED',
+      rejectionReason: canonicalEvent.data.reason,
+      updatedAt: canonicalEvent.occurredAt,
     });
   }
 }

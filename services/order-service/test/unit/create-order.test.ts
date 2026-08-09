@@ -30,6 +30,8 @@ describe('CreateOrder', () => {
     const order = await createUseCase().execute(createOrderRequest());
 
     expect(order.status).toBe('PENDING');
+    expect(order).not.toHaveProperty('reservationId');
+    expect(order).not.toHaveProperty('rejectionReason');
   });
 
   test('calculates totals with scaled decimal arithmetic', async () => {
@@ -121,6 +123,8 @@ describe('CreateOrder', () => {
       currency: 'USD',
       totalAmount: 0,
       status: 'CONFIRMED',
+      reservationId: '550e8400-e29b-41d4-a716-446655440015',
+      rejectionReason: 'INSUFFICIENT_STOCK',
     } as unknown as CreateOrderRequest;
 
     await expect(createUseCase().execute(request)).rejects.toBeInstanceOf(OrderValidationError);

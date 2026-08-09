@@ -10,13 +10,23 @@ export {
 export type { CreateProductRequest, OrderItem, Product, UpdateProductRequest } from './product.js';
 
 export {
+  confirmedOrderSchema,
   createOrderRequestSchema,
   customerIdSchema,
   orderIdSchema,
   orderSchema,
   orderStatusSchema,
+  pendingOrderSchema,
+  rejectedOrderSchema,
 } from './order.js';
-export type { CreateOrderRequest, Order, OrderStatus } from './order.js';
+export type {
+  ConfirmedOrder,
+  CreateOrderRequest,
+  Order,
+  OrderStatus,
+  PendingOrder,
+  RejectedOrder,
+} from './order.js';
 
 export {
   apiErrorResponseSchema,

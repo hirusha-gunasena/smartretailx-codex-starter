@@ -49,6 +49,8 @@ and returns the collected result.
 - Clients provide one uppercase, three-letter order currency that applies consistently to all lines.
 - The service generates the order ID, calculates the total, sets `PENDING`, and owns timestamps.
 - Client-supplied IDs, statuses, totals, and timestamps are rejected.
+- `PENDING` orders contain no terminal outcome metadata; `CONFIRMED` requires a UUID
+  `reservationId`, while `REJECTED` requires a non-empty `rejectionReason`.
 - Repository boundaries deep-copy orders and nested items.
 
 Shared contracts currently represent money as JavaScript decimal numbers. To preserve that API,
@@ -89,16 +91,19 @@ equal `data.orderId`, preserving the invariant established when the workflow beg
 
 `InventoryReserved` requests `PENDING -> CONFIRMED`; `InventoryRejected` requests
 `PENDING -> REJECTED`. DynamoDB performs the initial terminal transition with one conditional
-`UpdateCommand`, and the update touches only `status` and `updatedAt`. The condition requires an
-existing `PENDING` order and rejects an outcome timestamp earlier than immutable `createdAt`.
-Canonical `occurredAt` is normalized to UTC and used as deterministic `updatedAt`, so retries never
-replace business time with processing time.
+`UpdateCommand`. A confirmation atomically writes `status`, `updatedAt`, and the incoming
+`reservationId`; a rejection writes `status`, `updatedAt`, and the incoming reason as
+`rejectionReason`. Each branch removes the incompatible terminal metadata field without replacing
+the Order item or changing immutable business data. The condition requires an existing `PENDING`
+order and rejects an outcome timestamp earlier than immutable `createdAt`. Canonical `occurredAt`
+is used as deterministic `updatedAt`, so retries never replace business time with processing time.
 
 After a conditional failure, a strongly consistent read distinguishes safe duplicates from faults.
-An already matching terminal state is acknowledged without another write, preserving its original
-`updatedAt`. A missing order fails processing. An opposite terminal state is a typed workflow
-conflict: the order is never flipped, and the message remains eligible for retry and the future DLQ
-because it represents an inconsistent Saga outcome requiring investigation.
+An already matching terminal state is acknowledged only when its `reservationId` or
+`rejectionReason` also matches the incoming outcome. This performs no second write and preserves the
+original metadata and `updatedAt`. A same-status outcome with different metadata, an opposite
+terminal state, or a missing order fails processing. Conflicts never flip the Order and remain
+eligible for retry and the future DLQ because they require investigation.
 
 The SQS handler processes records independently and returns failed SQS `messageId` values through
 `batchItemFailures`; successful updates and safe duplicates are omitted. Task 015 explicitly
@@ -123,6 +128,13 @@ eventually advances the Order to `CONFIRMED` or `REJECTED`. Duplicate delivery i
 conditional writes prevent terminal-state flips, transient failures remain retryable, and
 irreconcilable outcomes are left for operational failure handling. Payment and compensation are not
 part of this workflow yet.
+
+Task 016A adds this terminal metadata to the durable Order shape because the canonical future
+`OrderConfirmed` event requires `reservationId` and `OrderRejected` requires a reason. Persisting
+the values atomically with the status transition lets a later Orders DynamoDB Stream relay construct
+those events solely from durable stream images, without querying Inventory or inventing data. Task
+016A does not publish terminal events and makes no infrastructure change; Task 016 will consume this
+metadata through CDC after separate acceptance.
 
 ## Local development and tests
 

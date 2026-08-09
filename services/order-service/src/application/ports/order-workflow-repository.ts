@@ -10,11 +10,23 @@ export const ORDER_WORKFLOW_TRANSITION_RESULT = {
 export type OrderWorkflowTransitionResult =
   (typeof ORDER_WORKFLOW_TRANSITION_RESULT)[keyof typeof ORDER_WORKFLOW_TRANSITION_RESULT];
 
-export interface OrderWorkflowTransition {
+interface OrderWorkflowTransitionBase {
   readonly orderId: string;
-  readonly targetStatus: OrderWorkflowTargetStatus;
   readonly updatedAt: string;
 }
+
+export interface ConfirmedOrderWorkflowTransition extends OrderWorkflowTransitionBase {
+  readonly targetStatus: 'CONFIRMED';
+  readonly reservationId: string;
+}
+
+export interface RejectedOrderWorkflowTransition extends OrderWorkflowTransitionBase {
+  readonly targetStatus: 'REJECTED';
+  readonly rejectionReason: string;
+}
+
+export type OrderWorkflowTransition =
+  ConfirmedOrderWorkflowTransition | RejectedOrderWorkflowTransition;
 
 export interface OrderWorkflowRepository {
   transitionFromPending(

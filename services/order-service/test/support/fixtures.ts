@@ -1,4 +1,9 @@
-import type { CreateOrderRequest, Order } from '@smartretailx/api-contracts';
+import type {
+  ConfirmedOrder,
+  CreateOrderRequest,
+  PendingOrder,
+  RejectedOrder,
+} from '@smartretailx/api-contracts';
 import type { Clock, IdGenerator } from '../../src/index.js';
 
 export const ORDER_ID = '550e8400-e29b-41d4-a716-446655440010';
@@ -7,6 +12,8 @@ export const CUSTOMER_ID = '550e8400-e29b-41d4-a716-446655440012';
 export const PRODUCT_ID = '550e8400-e29b-41d4-a716-446655440013';
 export const SECOND_PRODUCT_ID = '550e8400-e29b-41d4-a716-446655440014';
 export const CREATED_AT = '2026-08-09T08:30:00.000Z';
+export const RESERVATION_ID = '550e8400-e29b-41d4-a716-446655440015';
+export const REJECTION_REASON = 'INSUFFICIENT_STOCK';
 
 export const createOrderRequest = (
   overrides: Partial<CreateOrderRequest> = {},
@@ -17,7 +24,7 @@ export const createOrderRequest = (
   ...overrides,
 });
 
-export const orderFixture = (overrides: Partial<Order> = {}): Order => ({
+export const orderFixture = (overrides: Partial<PendingOrder> = {}): PendingOrder => ({
   orderId: ORDER_ID,
   customerId: CUSTOMER_ID,
   items: [{ productId: PRODUCT_ID, quantity: 2, unitPrice: 79.99 }],
@@ -26,6 +33,20 @@ export const orderFixture = (overrides: Partial<Order> = {}): Order => ({
   status: 'PENDING',
   createdAt: CREATED_AT,
   updatedAt: CREATED_AT,
+  ...overrides,
+});
+
+export const confirmedOrderFixture = (overrides: Partial<ConfirmedOrder> = {}): ConfirmedOrder => ({
+  ...orderFixture(),
+  status: 'CONFIRMED',
+  reservationId: RESERVATION_ID,
+  ...overrides,
+});
+
+export const rejectedOrderFixture = (overrides: Partial<RejectedOrder> = {}): RejectedOrder => ({
+  ...orderFixture(),
+  status: 'REJECTED',
+  rejectionReason: REJECTION_REASON,
   ...overrides,
 });
 

@@ -107,10 +107,11 @@ OrderCreated
 Immediately after `POST /api/v1/orders`, the durable Order is `PENDING`. After asynchronous
 inventory processing and outcome delivery, it eventually becomes `CONFIRMED` or `REJECTED`.
 `InventoryReserved` requests `CONFIRMED`; `InventoryRejected` requests `REJECTED`. One conditional
-DynamoDB update requires an existing `PENDING` Order and sets only `status` and deterministic
-`updatedAt` from canonical `occurredAt`. Matching duplicates are acknowledged without a rewrite,
-while an opposite terminal state is a typed conflict that cannot flip the Order and requires
-operational investigation.
+DynamoDB update requires an existing `PENDING` Order and sets deterministic `updatedAt` from
+canonical `occurredAt` together with `reservationId` for `CONFIRMED` or `rejectionReason` for
+`REJECTED`. Matching duplicates require both the same status and the same durable outcome metadata;
+they are acknowledged without a rewrite. Different metadata or an opposite terminal state is a
+typed conflict that cannot flip the Order and requires operational investigation.
 
 No distributed ACID transaction spans the Order and Inventory services: each owns and commits its
 state independently, and EventBridge/SQS communication is asynchronous. At-least-once duplicates
@@ -146,6 +147,22 @@ only `GetItem` and `UpdateItem`; the SQS integration adds source-queue consumer 
 EventBridge, and CloudWatch are regional service endpoints and no private resource is required.
 It has no EventBridge publication permission, so `OrderConfirmed`/`OrderRejected` publication and
 the Orders status-stream relay remain deferred. No Task 015 resource has been deployed.
+
+Task 016A corrects the durable Order shape required by that deferred CDC relay:
+
+```text
+PENDING   -> no terminal outcome metadata
+CONFIRMED -> reservationId
+REJECTED  -> rejectionReason
+```
+
+The Task 014 consumer already receives these values in canonical Inventory outcomes. It now stores
+the appropriate value atomically with the terminal status and deterministic timestamp, removes the
+incompatible metadata field, and treats a same-status delivery with different metadata as a Saga
+conflict rather than a duplicate. This lets the future unified Orders Stream relay construct the
+existing canonical `OrderConfirmed` and `OrderRejected` events from durable stream images without
+querying another service or fabricating business data. Task 016A adds no publisher, stream mapping,
+CDK resource, or deployment; Task 016 remains a separate follow-up.
 
 ## Data ownership
 

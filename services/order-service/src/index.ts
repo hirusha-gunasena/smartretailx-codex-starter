@@ -51,10 +51,12 @@ export type { IdGenerator } from './application/ports/id-generator.js';
 export type { OrderRepository } from './application/ports/order-repository.js';
 export { ORDER_WORKFLOW_TRANSITION_RESULT } from './application/ports/order-workflow-repository.js';
 export type {
+  ConfirmedOrderWorkflowTransition,
   OrderWorkflowRepository,
   OrderWorkflowTargetStatus,
   OrderWorkflowTransition,
   OrderWorkflowTransitionResult,
+  RejectedOrderWorkflowTransition,
 } from './application/ports/order-workflow-repository.js';
 
 export { createApp } from './composition/create-app.js';

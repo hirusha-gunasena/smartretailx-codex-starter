@@ -2,7 +2,13 @@ import { marshall } from '@aws-sdk/util-dynamodb';
 import { orderCreatedEventSchema } from '@smartretailx/event-contracts';
 import type { AttributeValue } from 'aws-lambda';
 import { OrderStreamRecordError, mapOrderStreamRecord } from '../../src/index.js';
-import { CREATED_AT, ORDER_ID, SECOND_PRODUCT_ID, orderFixture } from '../support/fixtures.js';
+import {
+  CREATED_AT,
+  ORDER_ID,
+  SECOND_PRODUCT_ID,
+  confirmedOrderFixture,
+  orderFixture,
+} from '../support/fixtures.js';
 import { streamRecordFixture } from '../support/event-fixtures.js';
 
 describe('mapOrderStreamRecord', () => {
@@ -61,9 +67,9 @@ describe('mapOrderStreamRecord', () => {
   });
 
   test('rejects a newly inserted order whose status is not PENDING', () => {
-    expect(() =>
-      mapOrderStreamRecord(streamRecordFixture(orderFixture({ status: 'CONFIRMED' }))),
-    ).toThrow(OrderStreamRecordError);
+    expect(() => mapOrderStreamRecord(streamRecordFixture(confirmedOrderFixture()))).toThrow(
+      OrderStreamRecordError,
+    );
   });
 
   test('maps nested order items without losing values', () => {

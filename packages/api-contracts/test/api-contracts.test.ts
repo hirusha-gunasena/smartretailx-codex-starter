@@ -12,6 +12,7 @@ import {
 const productId = '550e8400-e29b-41d4-a716-446655440000';
 const orderId = '550e8400-e29b-41d4-a716-446655440001';
 const customerId = '550e8400-e29b-41d4-a716-446655440002';
+const reservationId = '550e8400-e29b-41d4-a716-446655440003';
 const timestamp = '2026-08-08T10:30:00.000Z';
 
 describe('product API contracts', () => {
@@ -58,6 +59,13 @@ describe('order API contracts', () => {
     items: [{ productId, quantity: 2, unitPrice: 79.99 }],
     currency: 'USD',
   };
+  const orderBase = {
+    orderId,
+    ...createRequest,
+    totalAmount: 159.98,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
 
   test('accepts a valid create-order request', () => {
     expect(createOrderRequestSchema.safeParse(createRequest).success).toBe(true);
@@ -66,14 +74,88 @@ describe('order API contracts', () => {
   test('accepts a valid order response', () => {
     expect(
       orderSchema.safeParse({
-        orderId,
-        ...createRequest,
-        totalAmount: 159.98,
+        ...orderBase,
         status: 'PENDING',
-        createdAt: timestamp,
-        updatedAt: timestamp,
       }).success,
     ).toBe(true);
+  });
+
+  test('rejects PENDING with reservationId', () => {
+    expect(orderSchema.safeParse({ ...orderBase, status: 'PENDING', reservationId }).success).toBe(
+      false,
+    );
+  });
+
+  test('rejects PENDING with rejectionReason', () => {
+    expect(
+      orderSchema.safeParse({
+        ...orderBase,
+        status: 'PENDING',
+        rejectionReason: 'INSUFFICIENT_STOCK',
+      }).success,
+    ).toBe(false);
+  });
+
+  test('accepts CONFIRMED with a UUID reservationId', () => {
+    expect(
+      orderSchema.safeParse({ ...orderBase, status: 'CONFIRMED', reservationId }).success,
+    ).toBe(true);
+  });
+
+  test('rejects CONFIRMED without reservationId', () => {
+    expect(orderSchema.safeParse({ ...orderBase, status: 'CONFIRMED' }).success).toBe(false);
+  });
+
+  test('rejects CONFIRMED with an invalid reservationId', () => {
+    expect(
+      orderSchema.safeParse({
+        ...orderBase,
+        status: 'CONFIRMED',
+        reservationId: 'not-a-uuid',
+      }).success,
+    ).toBe(false);
+  });
+
+  test('rejects CONFIRMED with rejectionReason', () => {
+    expect(
+      orderSchema.safeParse({
+        ...orderBase,
+        status: 'CONFIRMED',
+        reservationId,
+        rejectionReason: 'INSUFFICIENT_STOCK',
+      }).success,
+    ).toBe(false);
+  });
+
+  test('accepts REJECTED with a non-empty rejectionReason', () => {
+    expect(
+      orderSchema.safeParse({
+        ...orderBase,
+        status: 'REJECTED',
+        rejectionReason: 'INSUFFICIENT_STOCK',
+      }).success,
+    ).toBe(true);
+  });
+
+  test('rejects REJECTED without rejectionReason', () => {
+    expect(orderSchema.safeParse({ ...orderBase, status: 'REJECTED' }).success).toBe(false);
+  });
+
+  test('rejects REJECTED with an empty rejectionReason', () => {
+    expect(
+      orderSchema.safeParse({ ...orderBase, status: 'REJECTED', rejectionReason: '   ' }).success,
+    ).toBe(false);
+  });
+
+  test('rejects REJECTED with reservationId', () => {
+    expect(
+      orderSchema.safeParse({
+        ...orderBase,
+        status: 'REJECTED',
+        rejectionReason: 'INSUFFICIENT_STOCK',
+        reservationId,
+      }).success,
+    ).toBe(false);
   });
 
   test('rejects empty orders and malformed identifiers', () => {
@@ -91,6 +173,8 @@ describe('order API contracts', () => {
         status: 'CONFIRMED',
         totalAmount: 0,
         createdAt: timestamp,
+        reservationId,
+        rejectionReason: 'INSUFFICIENT_STOCK',
       }).success,
     ).toBe(false);
   });
