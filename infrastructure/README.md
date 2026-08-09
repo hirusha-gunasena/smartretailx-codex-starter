@@ -2,7 +2,7 @@
 
 The CDK application keeps bounded workloads in separate stacks. `FoundationStack` remains the
 repository scaffold, `CatalogueStack` defines the Product Catalogue API, and `OrderEventsStack`
-defines the reliable `OrderCreated` relay infrastructure. `InventoryStack` reuses the Order event
+defines the unified Order lifecycle relay infrastructure. `InventoryStack` reuses the Order event
 bus and defines the asynchronous Inventory consumer path. `OrderWorkflowStack` reuses that bus and
 the existing Orders table for the Order-side inventory-outcome Saga transition.
 
@@ -49,7 +49,8 @@ For the `dev` environment, this stack synthesizes:
 - the `smartretailx-orders-dev` DynamoDB table with `orderId` as its string partition key,
   on-demand billing, Standard table class, default DynamoDB-owned encryption, and no sort key or
   indexes;
-- a `NEW_IMAGE` DynamoDB Stream, which supplies the complete inserted order required by the relay;
+- a `NEW_AND_OLD_IMAGES` DynamoDB Stream, which supplies `NewImage` for inserted Orders and both
+  `OldImage` and `NewImage` for lifecycle modifications;
 - the Node.js 22 `smartretailx-order-event-relay-dev` Lambda bundled from
   `services/order-service/src/order-event-relay.ts` with its application and AWS SDK dependencies;
 - the custom `smartretailx-order-events-dev` EventBridge bus, with no rules or cross-account policy;
@@ -62,6 +63,26 @@ is first established. It uses batches of 10, zero additional batching delay,
 `ReportBatchItemFailures`, three retries, batch bisection, and a one-hour maximum record age.
 Exhausted or expired records are preserved in the failure destination for debugging. That queue is
 not the future Inventory queue.
+
+One Orders stream, relay Lambda, and event-source mapping deliberately handle the complete
+lifecycle:
+
+```text
+Orders DynamoDB
+       |
+       | NEW_AND_OLD_IMAGES
+       v
+Unified Order Lifecycle Relay
+       |
+       +--> OrderCreated
+       +--> OrderConfirmed
+       +--> OrderRejected
+```
+
+An `INSERT` uses `NewImage` for `OrderCreated`. A `MODIFY` uses both validated images to recognize
+only `PENDING -> CONFIRMED` or `PENDING -> REJECTED`; transition-based detection prevents unrelated
+state-preserving writes from duplicating terminal events. Task 016 already implements this behavior,
+and `ReportBatchItemFailures` remains enabled for record-level retries.
 
 The relay receives only `ORDER_EVENT_BUS_NAME`; it reads each order from the stream and does not need
 table data-plane permissions or `ORDERS_TABLE_NAME`. Its application IAM is limited to
@@ -209,8 +230,9 @@ asynchronous Lambda DLQ or destination because SQS redrive is the failure mechan
 The Lambda remains outside a VPC because SQS, DynamoDB, EventBridge, and CloudWatch do not require
 private application networking for this workload. The stack adds no NAT Gateway, expensive
 always-on service, customer-managed KMS key, dashboard, alarm, or X-Ray configuration. It also has
-no EventBridge publishing permission: the Orders record remains the durable source of truth, while
-`OrderConfirmed`/`OrderRejected` publication from a later status-stream relay is deferred.
+no EventBridge publishing permission: the Orders record remains the durable source of truth, and the
+separate unified Orders CDC relay publishes `OrderConfirmed`/`OrderRejected` only after the durable
+transition.
 
 Safe outputs expose the workflow queue name and URL, DLQ name, Lambda name, and routing-rule name.
 The Task 015 infrastructure definition has not been deployed.
@@ -229,7 +251,8 @@ Inspect the local change set, when AWS credentials and bootstrap state are alrea
 npm run cdk:diff
 ```
 
-The stacks create infrastructure code only. No deployment has occurred. Production hardening
+The stacks create infrastructure code only. Task 017 changes only the existing Orders stream view;
+no deployment has occurred. Production hardening
 remains pending: deletion protection, `RETAIN` policies, point-in-time recovery, disaster-recovery
 configuration, production CORS origins, authentication, X-Ray, alarms, and later encryption-key
 review.

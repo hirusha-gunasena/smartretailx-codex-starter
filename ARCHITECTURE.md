@@ -21,7 +21,7 @@ POST Order -> Orders DynamoDB: PENDING
   -> EventBridge: InventoryReserved | InventoryRejected
   -> [Task 014 code + Task 015 CDK; not deployed] Order Workflow Consumer
   -> Orders DynamoDB: CONFIRMED | REJECTED
-  -> Orders stream MODIFY (Task 017: NEW_AND_OLD_IMAGES)
+  -> Orders stream MODIFY: NEW_AND_OLD_IMAGES
   -> same Unified Order Lifecycle Relay
   -> EventBridge: OrderConfirmed | OrderRejected
   -> [future] Notification consumer
@@ -123,8 +123,8 @@ retryable, and irreconcilable Saga outcomes follow operational failure handling.
 compensation are not implemented, and this is not a centralized Saga orchestrator.
 
 Task 014 does not directly publish `OrderConfirmed` or `OrderRejected`; the Orders record remains
-the durable source of truth, avoiding another database/event-bus dual write. A later Orders Stream
-status relay may produce those terminal events from `MODIFY` records. Task 015 defines the
+the durable source of truth, avoiding another database/event-bus dual write. The unified Orders
+Stream relay produces those terminal events from validated `MODIFY` transitions. Task 015 defines the
 EventBridge rule, Order Workflow SQS queue and DLQ, Lambda, least-privilege IAM, and event source
 mapping with `ReportBatchItemFailures`; those definitions are described below and remain
 undeployed.
@@ -148,8 +148,8 @@ existing Orders table name in its application environment. Its table-scoped appl
 only `GetItem` and `UpdateItem`; the SQS integration adds source-queue consumer operations without
 `SendMessage` or terminal-DLQ access. The Lambda remains outside a VPC because SQS, DynamoDB,
 EventBridge, and CloudWatch are regional service endpoints and no private resource is required.
-It has no EventBridge publication permission, so `OrderConfirmed`/`OrderRejected` publication and
-the Orders status-stream relay remain deferred. No Task 015 resource has been deployed.
+It has no EventBridge publication permission; terminal publication remains the separate unified
+Orders CDC relay's responsibility. No Task 015 resource has been deployed.
 
 Task 016A corrects the durable Order shape required by that deferred CDC relay:
 
@@ -177,10 +177,13 @@ EventBridge client and the existing bus configuration.
 
 The eventual lifecycle is deliberately staged: the POST commits `PENDING`; the asynchronous
 Inventory outcome commits a terminal Order state; then Orders CDC emits the terminal lifecycle
-event. Task 014 still performs no EventBridge publication. Task 016 is application/adapter code only,
-and the current Orders stream remains `NEW_IMAGE`; Task 017 must change the single existing stream to
-`NEW_AND_OLD_IMAGES` while preserving its one relay Lambda, one event-source mapping, and partial
-batch reporting. No Task 016 infrastructure has been deployed.
+event. Task 014 still performs no EventBridge publication. Task 016 is application/adapter code only.
+
+Task 017 changes the single existing Orders stream from `NEW_IMAGE` to `NEW_AND_OLD_IMAGES` so
+`INSERT` continues to supply `NewImage` and `MODIFY` supplies the `OldImage`/`NewImage` pair required
+for transition detection. It preserves one Orders table, one unified relay Lambda, one event-source
+mapping, the existing EventBridge bus, scoped IAM, bounded retries, failure destination, and
+`ReportBatchItemFailures`. No Task 016 or Task 017 infrastructure has been deployed.
 
 ## Data ownership
 

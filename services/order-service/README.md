@@ -182,7 +182,7 @@ Orders stream consumer:
 ```text
 Orders DynamoDB table
        |
-       | Task 017: NEW_AND_OLD_IMAGES
+       | NEW_AND_OLD_IMAGES
        v
  Unified Order Lifecycle Relay
        |
@@ -223,15 +223,15 @@ contract. A resolved `PutEvents` call is accepted only when its submitted entry 
 The batch handler returns failed stream sequence numbers through `batchItemFailures`, allowing
 successful publications and ignored records to avoid unnecessary retries. It continues processing
 later records after a representable failure. The existing event-source mapping enables
-`ReportBatchItemFailures`; Task 017 must preserve that behavior when changing the stream view. If a
+`ReportBatchItemFailures`, and Task 017 preserves that behavior with the updated stream view. If a
 failed record has no sequence number, the handler throws a typed error because inventing a retry
 identifier would be unsafe.
 
-Task 016 changes application and adapter code only. The current CDK definition still uses
-`NEW_IMAGE`, so terminal transition delivery is intentionally deferred until Task 017 changes that
-single existing stream to `NEW_AND_OLD_IMAGES`. Task 016 creates no Lambda, event source mapping,
-EventBridge rule, queue, IAM policy, or other AWS resource. The Task 014 consumer remains responsible
-only for the atomic durable Order update and has no EventBridge publication path.
+Task 016 changes application and adapter code only. Task 017 changes the single existing CDK stream
+to `NEW_AND_OLD_IMAGES` while preserving the same relay Lambda, event-source mapping, failure path,
+and partial-batch behavior. Neither task creates another relay. Task 014 remains responsible only
+for the atomic durable Order update and has no EventBridge publication path. These infrastructure
+definitions have not been deployed.
 
 ## Docker
 

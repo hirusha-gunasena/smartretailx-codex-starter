@@ -38,7 +38,7 @@ const actionsFor = (statement: Record<string, unknown>): string[] => {
     : [];
 };
 
-test('creates one development Orders table with NEW_IMAGE stream and no indexes', () => {
+test('creates one development Orders table with NEW_AND_OLD_IMAGES stream and no indexes', () => {
   template.resourceCountIs('AWS::DynamoDB::GlobalTable', 1);
   template.hasResourceProperties('AWS::DynamoDB::GlobalTable', {
     AttributeDefinitions: [{ AttributeName: 'orderId', AttributeType: 'S' }],
@@ -53,18 +53,19 @@ test('creates one development Orders table with NEW_IMAGE stream and no indexes'
         TableClass: 'STANDARD',
       }),
     ],
-    StreamSpecification: { StreamViewType: 'NEW_IMAGE' },
+    StreamSpecification: { StreamViewType: 'NEW_AND_OLD_IMAGES' },
     TableName: 'smartretailx-orders-dev',
   });
 
   const table = Object.values(template.findResources('AWS::DynamoDB::GlobalTable'))[0];
   expect(table).toBeDefined();
+  expect(table?.Properties.Replicas).toHaveLength(1);
   expect(table?.Properties).not.toHaveProperty('GlobalSecondaryIndexes');
   expect(table?.Properties).not.toHaveProperty('LocalSecondaryIndexes');
   expect(table?.DeletionPolicy).toBe('Delete');
 });
 
-test('creates the Node.js 22 relay Lambda outside a VPC', () => {
+test('creates one Node.js 22 unified relay Lambda outside a VPC', () => {
   template.resourceCountIs('AWS::Lambda::Function', 1);
   template.hasResourceProperties('AWS::Lambda::Function', {
     Code: Match.objectLike({
@@ -126,11 +127,35 @@ test('grants events PutEvents only on the custom event bus', () => {
 });
 
 test('grants read-only access to the Orders stream without table mutation permissions', () => {
+  const ordersTableLogicalId = Object.keys(template.findResources('AWS::DynamoDB::GlobalTable'))[0];
   const actions = policyStatements().flatMap(actionsFor);
+  const streamArnActions = streamReadActions.filter((action) => action !== 'dynamodb:ListStreams');
+  const streamReadStatement = policyStatements().find((statement) =>
+    streamArnActions.every((action) => actionsFor(statement).includes(action)),
+  );
+  const listStreamsStatement = policyStatements().find((statement) =>
+    actionsFor(statement).includes('dynamodb:ListStreams'),
+  );
 
+  expect(ordersTableLogicalId).toBeDefined();
+  expect(streamReadStatement).toEqual(
+    expect.objectContaining({
+      Action: expect.arrayContaining(streamArnActions),
+      Effect: 'Allow',
+      Resource: { 'Fn::GetAtt': [ordersTableLogicalId, 'StreamArn'] },
+    }),
+  );
+  expect(listStreamsStatement).toEqual(
+    expect.objectContaining({
+      Action: 'dynamodb:ListStreams',
+      Effect: 'Allow',
+      Resource: { 'Fn::GetAtt': [ordersTableLogicalId, 'StreamArn'] },
+    }),
+  );
   expect(actions).toEqual(expect.arrayContaining(streamReadActions));
   expect(actions).not.toEqual(
     expect.arrayContaining([
+      'dynamodb:GetItem',
       'dynamodb:PutItem',
       'dynamodb:UpdateItem',
       'dynamodb:DeleteItem',
@@ -138,6 +163,7 @@ test('grants read-only access to the Orders stream without table mutation permis
       'dynamodb:Query',
       'dynamodb:*',
       'events:*',
+      'sqs:*',
     ]),
   );
   expect(actions.some((action) => action.endsWith(':*'))).toBe(false);
@@ -150,11 +176,13 @@ test('grants read-only access to the Orders stream without table mutation permis
 
 test('configures bounded stream processing and partial batch failure reporting', () => {
   const ordersTableLogicalId = Object.keys(template.findResources('AWS::DynamoDB::GlobalTable'))[0];
+  const relayFunctionLogicalId = Object.keys(template.findResources('AWS::Lambda::Function'))[0];
   const relayFailureQueueLogicalId = Object.entries(template.findResources('AWS::SQS::Queue')).find(
     ([, queue]) => queue.Properties.QueueName === 'smartretailx-order-relay-failures-dev',
   )?.[0];
 
   expect(ordersTableLogicalId).toBeDefined();
+  expect(relayFunctionLogicalId).toBeDefined();
   expect(relayFailureQueueLogicalId).toBeDefined();
   template.resourceCountIs('AWS::Lambda::EventSourceMapping', 1);
   template.hasResourceProperties('AWS::Lambda::EventSourceMapping', {
@@ -171,11 +199,30 @@ test('configures bounded stream processing and partial batch failure reporting',
       'Fn::GetAtt': [ordersTableLogicalId, 'StreamArn'],
     },
     FunctionResponseTypes: ['ReportBatchItemFailures'],
+    FunctionName: { Ref: relayFunctionLogicalId },
     MaximumBatchingWindowInSeconds: 0,
     MaximumRecordAgeInSeconds: 3600,
     MaximumRetryAttempts: 3,
     StartingPosition: 'TRIM_HORIZON',
   });
+});
+
+test('grants failure-destination SendMessage only on the existing relay failure queue', () => {
+  const relayFailureQueueLogicalId = Object.entries(template.findResources('AWS::SQS::Queue')).find(
+    ([, queue]) => queue.Properties.QueueName === 'smartretailx-order-relay-failures-dev',
+  )?.[0];
+  const failureDestinationStatement = policyStatements().find((statement) =>
+    actionsFor(statement).includes('sqs:SendMessage'),
+  );
+
+  expect(relayFailureQueueLogicalId).toBeDefined();
+  expect(failureDestinationStatement).toEqual(
+    expect.objectContaining({
+      Action: expect.arrayContaining(['sqs:SendMessage']),
+      Effect: 'Allow',
+      Resource: { 'Fn::GetAtt': [relayFailureQueueLogicalId, 'Arn'] },
+    }),
+  );
 });
 
 test('creates encrypted failure and dead-letter queues with long retention', () => {

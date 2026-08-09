@@ -55,7 +55,7 @@ export class OrderEventsStack extends cdk.Stack {
       },
       billing: dynamodb.Billing.onDemand(),
       tableClass: dynamodb.TableClass.STANDARD,
-      dynamoStream: dynamodb.StreamViewType.NEW_IMAGE,
+      dynamoStream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
       deletionProtection: false,
       pointInTimeRecoverySpecification: {
         pointInTimeRecoveryEnabled: false,
