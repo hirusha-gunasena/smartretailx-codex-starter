@@ -15,6 +15,20 @@ export const streamRecordFixture = (
   ...overrides,
 });
 
+export const modifyStreamRecordFixture = (
+  oldOrder: Order,
+  newOrder: Order,
+  overrides: Partial<DynamoDBRecord> = {},
+): DynamoDBRecord => ({
+  eventName: 'MODIFY',
+  dynamodb: {
+    SequenceNumber: '100000000000000000001',
+    OldImage: marshall(oldOrder) as Record<string, AttributeValue>,
+    NewImage: marshall(newOrder) as Record<string, AttributeValue>,
+  },
+  ...overrides,
+});
+
 export const streamEventFixture = (records: readonly DynamoDBRecord[]): DynamoDBStreamEvent => ({
   Records: [...records],
 });

@@ -1,8 +1,8 @@
 # Order Service
 
 The Order Service is the container-ready SmartRetailX order-processing boundary. It supports order
-creation, retrieval, listing, and a lightweight health check. It also contains the Task 008 order
-event relay and Task 014 order workflow consumer code. Task 015 defines the consumer's AWS
+creation, retrieval, listing, and a lightweight health check. It also contains the unified Order
+lifecycle event relay and Task 014 order workflow consumer code. Task 015 defines the consumer's AWS
 infrastructure separately in CDK; none of it has been deployed.
 
 ## Architecture
@@ -119,8 +119,8 @@ EventBridge environment variable, or EventBridge publishing permission. The Lamb
 a VPC because its required AWS services do not require private networking.
 
 The consumer does not publish `OrderConfirmed` or `OrderRejected`. The updated Order is the durable
-source of truth, avoiding a DynamoDB/EventBridge dual write. A later, separately designed Orders
-DynamoDB Stream status relay can publish terminal events from `MODIFY` records.
+source of truth, avoiding a DynamoDB/EventBridge dual write. The unified Orders DynamoDB Stream
+relay publishes terminal events from the resulting `MODIFY` records after the durable update.
 
 There is no distributed ACID transaction across Order and Inventory. Each service owns its state:
 the Order begins `PENDING`, Inventory records its outcome independently, and asynchronous delivery
@@ -133,8 +133,8 @@ Task 016A adds this terminal metadata to the durable Order shape because the can
 `OrderConfirmed` event requires `reservationId` and `OrderRejected` requires a reason. Persisting
 the values atomically with the status transition lets a later Orders DynamoDB Stream relay construct
 those events solely from durable stream images, without querying Inventory or inventing data. Task
-016A does not publish terminal events and makes no infrastructure change; Task 016 will consume this
-metadata through CDC after separate acceptance.
+016A does not publish terminal events and makes no infrastructure change; Task 016 consumes this
+metadata through the existing CDC application path.
 
 ## Local development and tests
 
@@ -172,40 +172,66 @@ npm --workspace @smartretailx/order-service test
 The DynamoDB unit tests inject a mocked document client and do not contact AWS or require AWS
 credentials.
 
-## Reliable OrderCreated relay
+## Unified Order lifecycle CDC relay
 
 `CreateOrder` deliberately writes only the order. Writing DynamoDB and then directly publishing to
 EventBridge would be a dual write: either operation could succeed while the other fails, leaving the
-system inconsistent. The selected change-data-capture path is:
+system inconsistent. Task 016 extends the existing Task 008 relay rather than introducing a second
+Orders stream consumer:
 
 ```text
 Orders DynamoDB table
-  -> DynamoDB Stream INSERT
-  -> Order Event Relay Lambda
-  -> EventBridge
+       |
+       | Task 017: NEW_AND_OLD_IMAGES
+       v
+ Unified Order Lifecycle Relay
+       |
+       +-- INSERT PENDING
+       |     -> OrderCreated
+       |
+       +-- PENDING -> CONFIRMED
+       |     -> OrderConfirmed
+       |
+       +-- PENDING -> REJECTED
+             -> OrderRejected
 ```
 
-Only `INSERT` records produce `OrderCreated`; `MODIFY` and `REMOVE` are intentionally ignored. The
-relay requires `NewImage`, unmarshalls and validates it with the shared `Order` schema, requires
-`PENDING` status, and then validates the resulting shared `OrderCreated` contract.
+For `INSERT`, the relay preserves the Task 008 behavior: it requires `NewImage`, validates the
+durable Order with the shared strict schema, requires `PENDING`, and constructs canonical
+`OrderCreated`. For `MODIFY`, it requires and validates both images, confirms identity and immutable
+business fields, and requires monotonic lifecycle timestamps. Only `PENDING -> CONFIRMED` and
+`PENDING -> REJECTED` publish terminal events. State-preserving changes are ignored; terminal flips,
+rollbacks, terminal-metadata changes, and immutable-field mutations fail the record. `REMOVE`
+remains ignored.
+
+Terminal events are constructed solely from durable Order state. `OrderConfirmed.reservationId`
+comes directly from the new `CONFIRMED` image, and `OrderRejected.reason` comes directly from the
+new `REJECTED` image's `rejectionReason`. No Inventory query, fallback value, or replacement
+identifier is used. Event `occurredAt` is the new durable `updatedAt`, while `correlationId` remains
+the Order ID.
 
 DynamoDB Streams and Lambda are at-least-once systems, so retries and duplicate delivery are
 expected. The relay derives a UUID v5 from the standard URL namespace and
-`smartretailx:OrderCreated:<orderId>`. The same order therefore retains the same event ID on every
-retry. It also uses `orderId` as `correlationId` and `order.createdAt` as `occurredAt`. Downstream
-consumers must remain idempotent and deduplicate by `eventId`.
+`smartretailx:<eventType>:<orderId>`. Reprocessing a lifecycle transition therefore yields the same
+event ID, while `OrderCreated`, `OrderConfirmed`, and `OrderRejected` IDs remain distinct for one
+Order. Downstream consumers must remain idempotent and deduplicate by `eventId`.
 
 The EventBridge entry uses source `smartretailx.order-service` for namespaced AWS routing, while the
 shared envelope retains its established source `order-service` for compatibility with the canonical
 contract. A resolved `PutEvents` call is accepted only when its submitted entry did not fail.
 
 The batch handler returns failed stream sequence numbers through `batchItemFailures`, allowing
-successful records to avoid unnecessary retries. A future DynamoDB Streams event source mapping
-must explicitly enable `ReportBatchItemFailures`; this task adds response behavior only. If a failed
-record has no sequence number, the handler throws a typed error because inventing a retry identifier
-would be unsafe.
+successful publications and ignored records to avoid unnecessary retries. It continues processing
+later records after a representable failure. The existing event-source mapping enables
+`ReportBatchItemFailures`; Task 017 must preserve that behavior when changing the stream view. If a
+failed record has no sequence number, the handler throws a typed error because inventing a retry
+identifier would be unsafe.
 
-No stream, relay Lambda, EventBridge bus, trigger, event source mapping, or IAM role exists yet.
+Task 016 changes application and adapter code only. The current CDK definition still uses
+`NEW_IMAGE`, so terminal transition delivery is intentionally deferred until Task 017 changes that
+single existing stream to `NEW_AND_OLD_IMAGES`. Task 016 creates no Lambda, event source mapping,
+EventBridge rule, queue, IAM policy, or other AWS resource. The Task 014 consumer remains responsible
+only for the atomic durable Order update and has no EventBridge publication path.
 
 ## Docker
 

@@ -4,10 +4,14 @@ export { createDynamoDBDocumentClient } from './adapters/dynamodb/dynamodb-clien
 export { DynamoDBOrderRepository } from './adapters/dynamodb/dynamodb-order-repository.js';
 export { DynamoDBOrderWorkflowRepository } from './adapters/dynamodb/dynamodb-order-workflow-repository.js';
 export {
+  OrderLifecycleTransitionError,
   OrderStreamRecordError,
+  createOrderConfirmedEventId,
   createOrderCreatedEventId,
+  createOrderRejectedEventId,
   mapOrderStreamRecord,
 } from './adapters/events/dynamodb-order-stream-mapper.js';
+export type { OrderLifecycleEvent } from './adapters/events/dynamodb-order-stream-mapper.js';
 export {
   EventBridgeEventPublisher,
   EventPublicationError,
@@ -21,9 +25,13 @@ export type { EventRelayConfiguration } from './adapters/events/event-relay-conf
 export {
   UnreportableStreamRecordFailureError,
   createOrderCreatedRelayHandler,
+  createOrderLifecycleRelayHandler,
   processOrderStreamRecord,
 } from './adapters/events/order-created-relay-handler.js';
-export type { OrderCreatedRelayHandler } from './adapters/events/order-created-relay-handler.js';
+export type {
+  OrderCreatedRelayHandler,
+  OrderLifecycleRelayHandler,
+} from './adapters/events/order-created-relay-handler.js';
 export {
   INVENTORY_OUTCOME_EVENTBRIDGE_SOURCE,
   eventBridgeInventoryOutcomeEnvelopeSchema,

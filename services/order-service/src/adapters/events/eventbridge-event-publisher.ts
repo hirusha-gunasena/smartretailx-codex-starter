@@ -1,11 +1,25 @@
 import { PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import type { EventBridgeClient } from '@aws-sdk/client-eventbridge';
-import { orderCreatedEventSchema } from '@smartretailx/event-contracts';
-import type { OrderCreatedEvent } from '@smartretailx/event-contracts';
+import {
+  orderConfirmedEventSchema,
+  orderCreatedEventSchema,
+  orderRejectedEventSchema,
+} from '@smartretailx/event-contracts';
 import type { EventPublisher } from '../../application/ports/event-publisher.js';
+import type { OrderLifecycleEvent } from './dynamodb-order-stream-mapper.js';
 
 const EVENTBRIDGE_SOURCE = 'smartretailx.order-service';
-const EVENTBRIDGE_DETAIL_TYPE = 'OrderCreated';
+
+const validateCanonicalEvent = (event: OrderLifecycleEvent): OrderLifecycleEvent => {
+  switch (event.eventType) {
+    case 'OrderCreated':
+      return orderCreatedEventSchema.parse(event);
+    case 'OrderConfirmed':
+      return orderConfirmedEventSchema.parse(event);
+    case 'OrderRejected':
+      return orderRejectedEventSchema.parse(event);
+  }
+};
 
 export class EventPublicationError extends Error {
   public readonly code = 'EVENT_PUBLICATION_FAILED';
@@ -13,13 +27,14 @@ export class EventPublicationError extends Error {
   public constructor(
     public readonly eventId: string,
     public readonly eventBridgeErrorCode: string,
+    public readonly eventType: OrderLifecycleEvent['eventType'] = 'OrderCreated',
   ) {
-    super(`EventBridge rejected OrderCreated event '${eventId}' (${eventBridgeErrorCode}).`);
+    super(`EventBridge rejected ${eventType} event '${eventId}' (${eventBridgeErrorCode}).`);
     this.name = new.target.name;
   }
 }
 
-export class EventBridgeEventPublisher implements EventPublisher<OrderCreatedEvent> {
+export class EventBridgeEventPublisher implements EventPublisher<OrderLifecycleEvent> {
   public constructor(
     private readonly client: EventBridgeClient,
     private readonly eventBusName: string,
@@ -29,15 +44,15 @@ export class EventBridgeEventPublisher implements EventPublisher<OrderCreatedEve
     }
   }
 
-  public async publish(event: OrderCreatedEvent): Promise<void> {
-    const canonicalEvent = orderCreatedEventSchema.parse(event);
+  public async publish(event: OrderLifecycleEvent): Promise<void> {
+    const canonicalEvent = validateCanonicalEvent(event);
     const output = await this.client.send(
       new PutEventsCommand({
         Entries: [
           {
             EventBusName: this.eventBusName,
             Source: EVENTBRIDGE_SOURCE,
-            DetailType: EVENTBRIDGE_DETAIL_TYPE,
+            DetailType: canonicalEvent.eventType,
             Detail: JSON.stringify(canonicalEvent),
           },
         ],
@@ -53,6 +68,7 @@ export class EventBridgeEventPublisher implements EventPublisher<OrderCreatedEve
       throw new EventPublicationError(
         canonicalEvent.eventId,
         entry?.ErrorCode ?? 'UNKNOWN_EVENTBRIDGE_FAILURE',
+        canonicalEvent.eventType,
       );
     }
   }

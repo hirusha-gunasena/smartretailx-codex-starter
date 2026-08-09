@@ -12,29 +12,32 @@ Frontend/API Gateway -> ALB -> ECS Fargate Order service
 ## Event-driven order flow
 
 ```text
-Order Service
-  -> DynamoDB Orders table
-  -> DynamoDB Stream INSERT records
-  -> Order Event Relay Lambda
+POST Order -> Orders DynamoDB: PENDING
+  -> Orders stream INSERT
+  -> Unified Order Lifecycle Relay
   -> EventBridge: OrderCreated
-  -> [Task 011 CDK; not deployed] OrderCreated rule
-  -> [Task 011 CDK; not deployed] Inventory SQS queue and DLQ
-  -> [Task 011 CDK; not deployed] Inventory Lambda
-  -> [Task 011 CDK; not deployed] DynamoDB Inventory + Inventory Reservations tables
-  -> [Task 013 CDK; not deployed] Inventory Reservations NEW_IMAGE DynamoDB Stream
+  -> [Task 011 CDK; not deployed] Inventory queue, consumer, and tables
   -> [Task 012 code + Task 013 CDK; not deployed] Inventory Outcome Relay
-  -> Existing SmartRetailX EventBridge bus: InventoryReserved | InventoryRejected
-       +--> [Task 014 code + Task 015 CDK; not deployed] Order Workflow Consumer
-              -> Existing Orders table: PENDING -> CONFIRMED | REJECTED
-       +--> [future] Notification consumer
+  -> EventBridge: InventoryReserved | InventoryRejected
+  -> [Task 014 code + Task 015 CDK; not deployed] Order Workflow Consumer
+  -> Orders DynamoDB: CONFIRMED | REJECTED
+  -> Orders stream MODIFY (Task 017: NEW_AND_OLD_IMAGES)
+  -> same Unified Order Lifecycle Relay
+  -> EventBridge: OrderConfirmed | OrderRejected
+  -> [future] Notification consumer
 ```
 
 The Order API persists only; it does not directly publish to EventBridge because that would create a
 dual-write consistency gap. The relay uses DynamoDB Streams change data capture so an accepted order
-can be retried independently. Stream delivery is at least once, so `OrderCreated` IDs are derived
+can be retried independently. Stream delivery is at least once, so lifecycle event IDs are derived
 deterministically from event type and order ID, and every downstream consumer must be idempotent.
-Only `INSERT` records create events. The Task 009 CDK definition enables `ReportBatchItemFailures`
-so successfully processed stream records are not retried with failed ones. It starts at
+The unified relay preserves `INSERT PENDING -> OrderCreated` and recognizes only
+`PENDING -> CONFIRMED` or `PENDING -> REJECTED` transitions for terminal publication. Valid
+state-preserving modifications and removals are ignored; terminal flips, rollbacks, malformed
+images, immutable-data mutations, and timestamp regressions fail their individual stream records.
+
+The Task 009 CDK definition enables `ReportBatchItemFailures` so successfully processed stream
+records are not retried with failed ones. It starts at
 `TRIM_HORIZON`, processes batches of 10 without an added batching delay, bisects failed batches,
 limits retries to three, and sends exhausted or over-age records to a dedicated encrypted failure
 queue. Records older than one hour are sent to that failure path rather than retried indefinitely.
@@ -161,8 +164,23 @@ the appropriate value atomically with the terminal status and deterministic time
 incompatible metadata field, and treats a same-status delivery with different metadata as a Saga
 conflict rather than a duplicate. This lets the future unified Orders Stream relay construct the
 existing canonical `OrderConfirmed` and `OrderRejected` events from durable stream images without
-querying another service or fabricating business data. Task 016A adds no publisher, stream mapping,
-CDK resource, or deployment; Task 016 remains a separate follow-up.
+querying another service or fabricating business data. Task 016A added no publisher, stream mapping,
+CDK resource, or deployment; Task 016 now consumes that durable metadata through CDC.
+
+Task 016 extends the existing Task 008 mapper, publisher, batch handler, composition, and Lambda
+entry path into one unified Order lifecycle relay. It does not introduce another Orders stream
+consumer. `OrderCreated` retains its original deterministic identity and envelope behavior.
+`OrderConfirmed` takes the exact `reservationId` from the durable `CONFIRMED` new image, while
+`OrderRejected` takes the exact durable `rejectionReason`; both use the new image's `updatedAt` as
+`occurredAt` and the Order ID as `correlationId`. All three event types publish through one reused
+EventBridge client and the existing bus configuration.
+
+The eventual lifecycle is deliberately staged: the POST commits `PENDING`; the asynchronous
+Inventory outcome commits a terminal Order state; then Orders CDC emits the terminal lifecycle
+event. Task 014 still performs no EventBridge publication. Task 016 is application/adapter code only,
+and the current Orders stream remains `NEW_IMAGE`; Task 017 must change the single existing stream to
+`NEW_AND_OLD_IMAGES` while preserving its one relay Lambda, one event-source mapping, and partial
+batch reporting. No Task 016 infrastructure has been deployed.
 
 ## Data ownership
 

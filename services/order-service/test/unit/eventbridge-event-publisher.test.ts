@@ -1,19 +1,48 @@
 import { PutEventsCommand } from '@aws-sdk/client-eventbridge';
 import type { EventBridgeClient } from '@aws-sdk/client-eventbridge';
-import { orderCreatedEventSchema } from '@smartretailx/event-contracts';
-import type { OrderCreatedEvent } from '@smartretailx/event-contracts';
+import {
+  orderConfirmedEventSchema,
+  orderCreatedEventSchema,
+  orderRejectedEventSchema,
+} from '@smartretailx/event-contracts';
+import type {
+  OrderConfirmedEvent,
+  OrderCreatedEvent,
+  OrderRejectedEvent,
+} from '@smartretailx/event-contracts';
 import { jest } from '@jest/globals';
 import {
   EventBridgeEventPublisher,
   EventPublicationError,
   mapOrderStreamRecord,
 } from '../../src/index.js';
-import { streamRecordFixture } from '../support/event-fixtures.js';
+import { confirmedOrderFixture, orderFixture, rejectedOrderFixture } from '../support/fixtures.js';
+import { modifyStreamRecordFixture, streamRecordFixture } from '../support/event-fixtures.js';
 
 const EVENT_BUS_NAME = 'order-events';
 
 const orderCreatedEventFixture = (): OrderCreatedEvent =>
   orderCreatedEventSchema.parse(mapOrderStreamRecord(streamRecordFixture()));
+
+const orderConfirmedEventFixture = (): OrderConfirmedEvent =>
+  orderConfirmedEventSchema.parse(
+    mapOrderStreamRecord(
+      modifyStreamRecordFixture(
+        orderFixture(),
+        confirmedOrderFixture({ updatedAt: '2026-08-09T08:45:00.000Z' }),
+      ),
+    ),
+  );
+
+const orderRejectedEventFixture = (): OrderRejectedEvent =>
+  orderRejectedEventSchema.parse(
+    mapOrderStreamRecord(
+      modifyStreamRecordFixture(
+        orderFixture(),
+        rejectedOrderFixture({ updatedAt: '2026-08-09T08:45:00.000Z' }),
+      ),
+    ),
+  );
 
 describe('EventBridgeEventPublisher', () => {
   let send = jest.fn<(command: unknown) => Promise<unknown>>();
@@ -81,6 +110,40 @@ describe('EventBridgeEventPublisher', () => {
     ).toEqual(event);
   });
 
+  test('publishes canonical OrderConfirmed with the configured routing fields', async () => {
+    const event = orderConfirmedEventFixture();
+    successfulPublication();
+
+    await publisher.publish(event);
+
+    const command = send.mock.calls[0]![0] as PutEventsCommand;
+    const entry = command.input.Entries?.[0];
+    expect(command).toBeInstanceOf(PutEventsCommand);
+    expect(entry).toMatchObject({
+      EventBusName: EVENT_BUS_NAME,
+      Source: 'smartretailx.order-service',
+      DetailType: 'OrderConfirmed',
+    });
+    expect(orderConfirmedEventSchema.parse(JSON.parse(entry?.Detail ?? ''))).toEqual(event);
+  });
+
+  test('publishes canonical OrderRejected with the configured routing fields', async () => {
+    const event = orderRejectedEventFixture();
+    successfulPublication();
+
+    await publisher.publish(event);
+
+    const command = send.mock.calls[0]![0] as PutEventsCommand;
+    const entry = command.input.Entries?.[0];
+    expect(command).toBeInstanceOf(PutEventsCommand);
+    expect(entry).toMatchObject({
+      EventBusName: EVENT_BUS_NAME,
+      Source: 'smartretailx.order-service',
+      DetailType: 'OrderRejected',
+    });
+    expect(orderRejectedEventSchema.parse(JSON.parse(entry?.Detail ?? ''))).toEqual(event);
+  });
+
   test('treats FailedEntryCount zero as success', async () => {
     successfulPublication();
 
@@ -99,6 +162,8 @@ describe('EventBridgeEventPublisher', () => {
     await expect(publication).rejects.toMatchObject({
       code: 'EVENT_PUBLICATION_FAILED',
       eventBridgeErrorCode: 'InternalFailure',
+      eventType: 'OrderCreated',
+      message: expect.stringContaining('EventBridge rejected OrderCreated event'),
     });
   });
 

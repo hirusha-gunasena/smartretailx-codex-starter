@@ -1,4 +1,3 @@
-import type { OrderCreatedEvent } from '@smartretailx/event-contracts';
 import type {
   DynamoDBBatchItemFailure,
   DynamoDBBatchResponse,
@@ -7,10 +6,14 @@ import type {
 } from 'aws-lambda';
 import type { EventPublisher } from '../../application/ports/event-publisher.js';
 import { mapOrderStreamRecord } from './dynamodb-order-stream-mapper.js';
+import type { OrderLifecycleEvent } from './dynamodb-order-stream-mapper.js';
 
-export type OrderCreatedRelayHandler = (
+export type OrderLifecycleRelayHandler = (
   event: DynamoDBStreamEvent,
 ) => Promise<DynamoDBBatchResponse>;
+
+/** Retained for existing Task 008 imports; the handler now relays the full Order lifecycle. */
+export type OrderCreatedRelayHandler = OrderLifecycleRelayHandler;
 
 export class UnreportableStreamRecordFailureError extends Error {
   public readonly code = 'UNREPORTABLE_STREAM_RECORD_FAILURE';
@@ -25,7 +28,7 @@ export class UnreportableStreamRecordFailureError extends Error {
 
 export const processOrderStreamRecord = async (
   record: DynamoDBRecord,
-  publisher: EventPublisher<OrderCreatedEvent>,
+  publisher: EventPublisher<OrderLifecycleEvent>,
 ): Promise<void> => {
   const event = mapOrderStreamRecord(record);
 
@@ -34,8 +37,8 @@ export const processOrderStreamRecord = async (
   }
 };
 
-export const createOrderCreatedRelayHandler =
-  (publisher: EventPublisher<OrderCreatedEvent>): OrderCreatedRelayHandler =>
+export const createOrderLifecycleRelayHandler =
+  (publisher: EventPublisher<OrderLifecycleEvent>): OrderLifecycleRelayHandler =>
   async (event: DynamoDBStreamEvent): Promise<DynamoDBBatchResponse> => {
     const batchItemFailures: DynamoDBBatchItemFailure[] = [];
     const unreportableRecordIndexes: number[] = [];
@@ -60,3 +63,6 @@ export const createOrderCreatedRelayHandler =
 
     return { batchItemFailures };
   };
+
+/** Retained for existing Task 008 imports; no second relay handler is created. */
+export const createOrderCreatedRelayHandler = createOrderLifecycleRelayHandler;
