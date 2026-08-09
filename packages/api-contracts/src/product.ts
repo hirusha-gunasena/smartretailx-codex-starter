@@ -3,11 +3,11 @@ import { z } from 'zod';
 const productNameSchema = z.string().trim().min(1).max(200);
 const productDescriptionSchema = z.string().trim().min(1).max(2_000);
 const productPriceSchema = z.number().finite().nonnegative();
-const currencySchema = z
+export const currencySchema = z
   .string()
   .regex(/^[A-Z]{3}$/, 'Currency must be a three-letter uppercase code');
 const imageUrlSchema = z.string().url();
-const timestampSchema = z.string().datetime({ offset: true });
+export const timestampSchema = z.string().datetime({ offset: true });
 
 export const productIdSchema = z.string().uuid();
 
