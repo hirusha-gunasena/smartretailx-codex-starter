@@ -24,7 +24,8 @@ Order Service
   -> [Task 013 CDK; not deployed] Inventory Reservations NEW_IMAGE DynamoDB Stream
   -> [Task 012 code + Task 013 CDK; not deployed] Inventory Outcome Relay
   -> Existing SmartRetailX EventBridge bus: InventoryReserved | InventoryRejected
-       +--> [future] Order workflow consumer
+       +--> [Task 014 code only; infrastructure not deployed] Order Workflow Consumer
+              -> Existing Orders table: PENDING -> CONFIRMED | REJECTED
        +--> [future] Notification consumer
 ```
 
@@ -91,6 +92,37 @@ The relay remains outside a VPC and reuses the existing cross-stack EventBridge 
 read only the Reservations stream, put events only on that bus, and send only to its failure
 destination. It has no Inventory table mutation permission. Future Order workflow and Notification
 consumers remain deferred, and Task 013 has not been deployed.
+
+Task 014 adds the Order workflow consumer application and adapter code only. It is the Order-side
+state-transition participant in the choreography-based Saga:
+
+```text
+OrderCreated
+  -> Inventory reservation
+  -> InventoryReserved | InventoryRejected
+  -> Order Workflow Consumer
+  -> CONFIRMED | REJECTED
+```
+
+Immediately after `POST /api/v1/orders`, the durable Order is `PENDING`. After asynchronous
+inventory processing and outcome delivery, it eventually becomes `CONFIRMED` or `REJECTED`.
+`InventoryReserved` requests `CONFIRMED`; `InventoryRejected` requests `REJECTED`. One conditional
+DynamoDB update requires an existing `PENDING` Order and sets only `status` and deterministic
+`updatedAt` from canonical `occurredAt`. Matching duplicates are acknowledged without a rewrite,
+while an opposite terminal state is a typed conflict that cannot flip the Order and requires
+operational investigation.
+
+No distributed ACID transaction spans the Order and Inventory services: each owns and commits its
+state independently, and EventBridge/SQS communication is asynchronous. At-least-once duplicates
+are tolerated, conditional writes enforce state-machine correctness, transient failures remain
+retryable, and irreconcilable Saga outcomes follow operational failure handling. Payment and
+compensation are not implemented, and this is not a centralized Saga orchestrator.
+
+Task 014 does not directly publish `OrderConfirmed` or `OrderRejected`; the Orders record remains
+the durable source of truth, avoiding another database/event-bus dual write. A later Orders Stream
+status relay may produce those terminal events from `MODIFY` records. Task 015 must create the
+future EventBridge rule, Order Workflow SQS queue and DLQ, Lambda, least-privilege IAM, and an event
+source mapping with `ReportBatchItemFailures`. No Task 014 infrastructure has been deployed.
 
 ## Data ownership
 

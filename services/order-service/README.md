@@ -2,13 +2,14 @@
 
 The Order Service is the container-ready SmartRetailX order-processing boundary. It supports order
 creation, retrieval, listing, and a lightweight health check. It also contains the Task 008 order
-event relay code without creating or changing any AWS infrastructure.
+event relay and Task 014 order workflow consumer code without creating or changing any AWS
+infrastructure.
 
 ## Architecture
 
 - `domain` owns order validation, status, typed errors, immutable snapshots, and total calculation.
-- `application` contains create, get, and list use cases plus storage, clock, ID, and event publishing
-  ports.
+- `application` contains create, get, list, and inventory-outcome processing use cases plus their
+  storage, clock, ID, and event publishing ports.
 - `adapters/http` exposes the Express API and maps results and failures to shared response envelopes.
 - `adapters/persistence` supplies an in-memory repository for local development and tests.
 - `adapters/dynamodb` supplies the production persistence adapter and AWS SDK document-client
@@ -21,7 +22,8 @@ The local entry point explicitly composes `InMemoryOrderRepository`. The separat
 point composes one `DynamoDBClient`, one `DynamoDBDocumentClient`, and one
 `DynamoDBOrderRepository`, then reuses them across requests through the existing order use cases and
 Express application. The separate event-relay entry point composes its EventBridge publisher once
-for reuse by a future Lambda runtime.
+for reuse by a future Lambda runtime. The workflow-consumer entry point likewise composes one
+document client for reuse across an SQS batch and warm Lambda invocations.
 
 ## Routes
 
@@ -56,16 +58,63 @@ range. A future money contract should use fixed minor units or an explicit decim
 
 ## Configuration
 
-| Variable               | Local default | Description                                     |
-| ---------------------- | ------------- | ----------------------------------------------- |
-| `PORT`                 | `3000`        | Listening port from 1 through 65535             |
-| `ORDERS_TABLE_NAME`    | Not used      | Required non-empty name for production DynamoDB |
-| `ORDER_EVENT_BUS_NAME` | Not used      | Required only by the production event relay     |
+| Variable               | Local default | Description                                    |
+| ---------------------- | ------------- | ---------------------------------------------- |
+| `PORT`                 | `3000`        | Listening port from 1 through 65535            |
+| `ORDERS_TABLE_NAME`    | Not used      | Required by production HTTP and workflow paths |
+| `ORDER_EVENT_BUS_NAME` | Not used      | Required only by the production event relay    |
 
 Both servers bind to `0.0.0.0` so they are reachable inside a container. AWS region and credentials
 are not hardcoded; the AWS SDK uses its standard runtime configuration chain. Production
 composition fails before listening when `ORDERS_TABLE_NAME` is missing or empty. Event-relay
 composition independently fails when `ORDER_EVENT_BUS_NAME` is missing or empty.
+
+## Order workflow Saga consumer
+
+Task 014 adds application and adapter code for the Order-side participant in the choreography-based
+Saga. It does not add or deploy its future EventBridge rule, SQS queue, DLQ, Lambda, event source
+mapping, IAM policy, or any other AWS resource. The intended asynchronous path is:
+
+```text
+InventoryReserved | InventoryRejected on EventBridge
+  -> future Order Workflow SQS queue
+  -> future Order Workflow Lambda
+  -> existing Orders DynamoDB table
+```
+
+The consumer validates the complete EventBridge wrapper, including routing source
+`smartretailx.inventory-service`, then validates `detail` with the existing shared canonical event
+schema. `detail-type` and the canonical event type must agree. It also requires `correlationId` to
+equal `data.orderId`, preserving the invariant established when the workflow began.
+
+`InventoryReserved` requests `PENDING -> CONFIRMED`; `InventoryRejected` requests
+`PENDING -> REJECTED`. DynamoDB performs the initial terminal transition with one conditional
+`UpdateCommand`, and the update touches only `status` and `updatedAt`. The condition requires an
+existing `PENDING` order and rejects an outcome timestamp earlier than immutable `createdAt`.
+Canonical `occurredAt` is normalized to UTC and used as deterministic `updatedAt`, so retries never
+replace business time with processing time.
+
+After a conditional failure, a strongly consistent read distinguishes safe duplicates from faults.
+An already matching terminal state is acknowledged without another write, preserving its original
+`updatedAt`. A missing order fails processing. An opposite terminal state is a typed workflow
+conflict: the order is never flipped, and the message remains eligible for retry and the future DLQ
+because it represents an inconsistent Saga outcome requiring investigation.
+
+The SQS handler processes records independently and returns failed SQS `messageId` values through
+`batchItemFailures`; successful updates and safe duplicates are omitted. Task 015 must explicitly
+configure the future event source mapping with `ReportBatchItemFailures`—the response shape alone
+does not enable partial retries.
+
+The consumer does not publish `OrderConfirmed` or `OrderRejected`. The updated Order is the durable
+source of truth, avoiding a DynamoDB/EventBridge dual write. A later, separately designed Orders
+DynamoDB Stream status relay can publish terminal events from `MODIFY` records.
+
+There is no distributed ACID transaction across Order and Inventory. Each service owns its state:
+the Order begins `PENDING`, Inventory records its outcome independently, and asynchronous delivery
+eventually advances the Order to `CONFIRMED` or `REJECTED`. Duplicate delivery is tolerated,
+conditional writes prevent terminal-state flips, transient failures remain retryable, and
+irreconcilable outcomes are left for operational failure handling. Payment and compensation are not
+part of this workflow yet.
 
 ## Local development and tests
 
