@@ -88,8 +88,8 @@ reliable path:
 ```text
 Inventory Lambda
   -> durable Inventory Reservations record
-  -> [Task 013 infrastructure pending] DynamoDB Stream NEW_IMAGE
-  -> [Task 013 Lambda resource pending] Inventory Outcome Relay
+  -> [Task 013 CDK; not deployed] DynamoDB Stream NEW_IMAGE
+  -> [Task 012 code + Task 013 CDK; not deployed] Inventory Outcome Relay
   -> existing SmartRetailX EventBridge bus
   -> InventoryReserved | InventoryRejected
   -> future idempotent consumers
@@ -112,13 +112,17 @@ deliver duplicates.
 Each stream record is handled independently. Mapping and publication failures return the record's
 DynamoDB sequence number in `batchItemFailures`, and later records continue processing. A failed
 record without a usable sequence number raises an explicit unreportable-record error rather than
-inventing an identifier. Task 013 **must** set the DynamoDB Streams event source mapping function
-response type to `ReportBatchItemFailures`; returning this application response is not sufficient
-by itself.
+inventing an identifier. Task 013 configures the DynamoDB Streams event source mapping function
+response type as `ReportBatchItemFailures`; returning this application response would not be
+sufficient by itself.
 
 Task 012 creates no Reservations table stream, relay Lambda resource, event source mapping,
-EventBridge rule, queue, IAM policy, or other AWS resource. Those infrastructure changes remain
-pending for Task 013, and nothing described here has been deployed.
+EventBridge rule, queue, IAM policy, or other AWS resource. Task 013 now defines the stream, relay
+Lambda, mapping, least-privilege permissions, and a dedicated on-failure queue with a terminal DLQ.
+The SQS on-failure destination contains Lambda invocation and failure metadata rather than the full
+original DynamoDB stream payload; S3 is the AWS alternative when complete original invocation
+retention is required. Nothing described here has been deployed, and downstream Order and
+Notification consumers remain deferred.
 
 ## Runtime configuration
 

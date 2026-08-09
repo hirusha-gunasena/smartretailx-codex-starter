@@ -3,6 +3,13 @@ import { Match, Template } from 'aws-cdk-lib/assertions';
 import { InventoryStack } from '../lib/inventory-stack.js';
 import { OrderEventsStack } from '../lib/order-events-stack.js';
 
+const streamReadActions = [
+  'dynamodb:DescribeStream',
+  'dynamodb:GetRecords',
+  'dynamodb:GetShardIterator',
+  'dynamodb:ListStreams',
+];
+
 let orderEventsTemplate: Template;
 let inventoryTemplate: Template;
 
@@ -39,14 +46,6 @@ const resourceEntry = (
 const propertiesOf = (resource: Record<string, unknown>): Record<string, unknown> =>
   resource.Properties as Record<string, unknown>;
 
-const policyStatements = (): Array<Record<string, unknown>> =>
-  Object.values(inventoryTemplate.findResources('AWS::IAM::Policy')).flatMap((policy) => {
-    const policyDocument = policy.Properties.PolicyDocument as {
-      Statement?: Array<Record<string, unknown>>;
-    };
-    return policyDocument.Statement ?? [];
-  });
-
 const actionsFor = (statement: Record<string, unknown>): string[] => {
   const action = statement.Action;
   if (typeof action === 'string') {
@@ -57,6 +56,37 @@ const actionsFor = (statement: Record<string, unknown>): string[] => {
     : [];
 };
 
+const functionEntry = (functionName: string): [string, Record<string, unknown>] =>
+  resourceEntry(
+    inventoryTemplate,
+    'AWS::Lambda::Function',
+    (resource) => propertiesOf(resource).FunctionName === functionName,
+  );
+
+const roleLogicalIdForFunction = (functionName: string): string => {
+  const [, functionResource] = functionEntry(functionName);
+  const roleReference = propertiesOf(functionResource).Role as { 'Fn::GetAtt'?: unknown };
+  const getAtt = roleReference['Fn::GetAtt'];
+
+  if (!Array.isArray(getAtt) || typeof getAtt[0] !== 'string') {
+    throw new Error(`Unable to resolve the execution role for ${functionName}.`);
+  }
+  return getAtt[0];
+};
+
+const policyStatementsForFunction = (functionName: string): Array<Record<string, unknown>> => {
+  const roleLogicalId = roleLogicalIdForFunction(functionName);
+
+  return Object.values(inventoryTemplate.findResources('AWS::IAM::Policy')).flatMap((policy) => {
+    const properties = policy.Properties as {
+      PolicyDocument?: { Statement?: Array<Record<string, unknown>> };
+      Roles?: Array<{ Ref?: unknown }>;
+    };
+    const belongsToFunction = properties.Roles?.some((role) => role.Ref === roleLogicalId) ?? false;
+    return belongsToFunction ? (properties.PolicyDocument?.Statement ?? []) : [];
+  });
+};
+
 test('reuses the OrderEventsStack bus through a cross-stack reference', () => {
   orderEventsTemplate.resourceCountIs('AWS::Events::EventBus', 1);
   inventoryTemplate.resourceCountIs('AWS::Events::EventBus', 0);
@@ -65,9 +95,19 @@ test('reuses the OrderEventsStack bus through a cross-stack reference', () => {
       'Fn::ImportValue': Match.stringLikeRegexp('.*OrderEventBus.*'),
     },
   });
+  inventoryTemplate.hasResourceProperties('AWS::Lambda::Function', {
+    FunctionName: 'smartretailx-inventory-outcome-relay-dev',
+    Environment: {
+      Variables: {
+        INVENTORY_EVENT_BUS_NAME: {
+          'Fn::ImportValue': Match.stringLikeRegexp('.*OrderEventBus.*'),
+        },
+      },
+    },
+  });
 });
 
-test('creates the two development tables without indexes, streams, or additional replicas', () => {
+test('keeps both development tables and enables NEW_IMAGE only on Reservations', () => {
   inventoryTemplate.resourceCountIs('AWS::DynamoDB::GlobalTable', 2);
 
   for (const [tableName, partitionKey] of [
@@ -97,9 +137,24 @@ test('creates the two development tables without indexes, streams, or additional
     expect(table.Properties.Replicas).toHaveLength(1);
     expect(table.Properties).not.toHaveProperty('GlobalSecondaryIndexes');
     expect(table.Properties).not.toHaveProperty('LocalSecondaryIndexes');
-    expect(table.Properties).not.toHaveProperty('StreamSpecification');
     expect(table.DeletionPolicy).toBe('Delete');
   }
+
+  const [, inventoryTable] = resourceEntry(
+    inventoryTemplate,
+    'AWS::DynamoDB::GlobalTable',
+    (resource) => propertiesOf(resource).TableName === 'smartretailx-inventory-dev',
+  );
+  const [, reservationsTable] = resourceEntry(
+    inventoryTemplate,
+    'AWS::DynamoDB::GlobalTable',
+    (resource) => propertiesOf(resource).TableName === 'smartretailx-inventory-reservations-dev',
+  );
+
+  expect(propertiesOf(inventoryTable)).not.toHaveProperty('StreamSpecification');
+  expect(propertiesOf(reservationsTable).StreamSpecification).toEqual({
+    StreamViewType: 'NEW_IMAGE',
+  });
 });
 
 test('creates encrypted standard source and dead-letter queues with bounded redrive', () => {
@@ -109,7 +164,7 @@ test('creates encrypted standard source and dead-letter queues with bounded redr
     (resource) => propertiesOf(resource).QueueName === 'smartretailx-inventory-orders-dlq-dev',
   );
 
-  inventoryTemplate.resourceCountIs('AWS::SQS::Queue', 2);
+  inventoryTemplate.resourceCountIs('AWS::SQS::Queue', 4);
   inventoryTemplate.hasResourceProperties('AWS::SQS::Queue', {
     MessageRetentionPeriod: 345_600,
     QueueName: 'smartretailx-inventory-orders-dev',
@@ -197,7 +252,7 @@ test('allows EventBridge to send only to the source queue from the routing rule'
 });
 
 test('creates the Node.js 22 Inventory consumer outside a VPC', () => {
-  inventoryTemplate.resourceCountIs('AWS::Lambda::Function', 1);
+  inventoryTemplate.resourceCountIs('AWS::Lambda::Function', 2);
   inventoryTemplate.hasResourceProperties('AWS::Lambda::Function', {
     Code: Match.objectLike({
       S3Bucket: Match.anyValue(),
@@ -220,17 +275,14 @@ test('creates the Node.js 22 Inventory consumer outside a VPC', () => {
     Timeout: 15,
   });
 
-  const inventoryFunction = Object.values(
-    inventoryTemplate.findResources('AWS::Lambda::Function'),
-  )[0];
-  expect(inventoryFunction).toBeDefined();
-  expect(inventoryFunction?.Properties).not.toHaveProperty('VpcConfig');
-  expect(inventoryFunction?.Properties).not.toHaveProperty('ReservedConcurrentExecutions');
-  expect(inventoryFunction?.Properties).not.toHaveProperty('DeadLetterConfig');
+  const [, inventoryFunction] = functionEntry('smartretailx-inventory-consumer-dev');
+  expect(propertiesOf(inventoryFunction)).not.toHaveProperty('VpcConfig');
+  expect(propertiesOf(inventoryFunction)).not.toHaveProperty('ReservedConcurrentExecutions');
+  expect(propertiesOf(inventoryFunction)).not.toHaveProperty('DeadLetterConfig');
 });
 
 test('retains dedicated Inventory consumer logs for seven days in development', () => {
-  inventoryTemplate.resourceCountIs('AWS::Logs::LogGroup', 1);
+  inventoryTemplate.resourceCountIs('AWS::Logs::LogGroup', 2);
   inventoryTemplate.hasResourceProperties('AWS::Logs::LogGroup', {
     LogGroupName: '/aws/lambda/smartretailx-inventory-consumer-dev',
     RetentionInDays: 7,
@@ -248,7 +300,7 @@ test('grants exact table-scoped DynamoDB permissions without broad access', () =
     'AWS::DynamoDB::GlobalTable',
     (resource) => propertiesOf(resource).TableName === 'smartretailx-inventory-reservations-dev',
   );
-  const statements = policyStatements();
+  const statements = policyStatementsForFunction('smartretailx-inventory-consumer-dev');
 
   expect(statements).toEqual(
     expect.arrayContaining([
@@ -291,7 +343,7 @@ test('grants queue consumption without source-queue send or DLQ application acce
     'AWS::SQS::Queue',
     (resource) => propertiesOf(resource).QueueName === 'smartretailx-inventory-orders-dlq-dev',
   );
-  const statements = policyStatements();
+  const statements = policyStatementsForFunction('smartretailx-inventory-consumer-dev');
   const sqsStatements = statements.filter((statement) =>
     actionsFor(statement).some((action) => action.startsWith('sqs:')),
   );
@@ -321,12 +373,9 @@ test('maps the source queue to the consumer with partial batch reporting', () =>
     'AWS::SQS::Queue',
     (resource) => propertiesOf(resource).QueueName === 'smartretailx-inventory-orders-dev',
   );
-  const functionLogicalId = Object.keys(
-    inventoryTemplate.findResources('AWS::Lambda::Function'),
-  )[0];
-  expect(functionLogicalId).toBeDefined();
+  const [functionLogicalId] = functionEntry('smartretailx-inventory-consumer-dev');
 
-  inventoryTemplate.resourceCountIs('AWS::Lambda::EventSourceMapping', 1);
+  inventoryTemplate.resourceCountIs('AWS::Lambda::EventSourceMapping', 2);
   inventoryTemplate.hasResourceProperties('AWS::Lambda::EventSourceMapping', {
     BatchSize: 10,
     EventSourceArn: { 'Fn::GetAtt': [sourceQueueLogicalId, 'Arn'] },
@@ -334,6 +383,187 @@ test('maps the source queue to the consumer with partial batch reporting', () =>
     FunctionResponseTypes: ['ReportBatchItemFailures'],
     MaximumBatchingWindowInSeconds: 0,
   });
+});
+
+test('creates the Node.js 22 Inventory outcome relay outside a VPC', () => {
+  inventoryTemplate.hasResourceProperties('AWS::Lambda::Function', {
+    Code: Match.objectLike({
+      S3Bucket: Match.anyValue(),
+      S3Key: Match.anyValue(),
+    }),
+    Description: 'SmartRetailX Inventory Outcome Event Relay',
+    Environment: {
+      Variables: {
+        INVENTORY_EVENT_BUS_NAME: {
+          'Fn::ImportValue': Match.stringLikeRegexp('.*OrderEventBus.*'),
+        },
+      },
+    },
+    FunctionName: 'smartretailx-inventory-outcome-relay-dev',
+    MemorySize: 256,
+    Runtime: 'nodejs22.x',
+    Timeout: 10,
+  });
+
+  const [, relayFunction] = functionEntry('smartretailx-inventory-outcome-relay-dev');
+  const relayProperties = propertiesOf(relayFunction);
+  expect(relayProperties).not.toHaveProperty('VpcConfig');
+  expect(relayProperties).not.toHaveProperty('ReservedConcurrentExecutions');
+  expect(relayProperties).not.toHaveProperty('DeadLetterConfig');
+  expect(relayProperties.Environment).toEqual({
+    Variables: {
+      INVENTORY_EVENT_BUS_NAME: {
+        'Fn::ImportValue': expect.stringMatching(/OrderEventBus/u),
+      },
+    },
+  });
+});
+
+test('retains dedicated Inventory outcome relay logs for seven days in development', () => {
+  inventoryTemplate.hasResourceProperties('AWS::Logs::LogGroup', {
+    LogGroupName: '/aws/lambda/smartretailx-inventory-outcome-relay-dev',
+    RetentionInDays: 7,
+  });
+});
+
+test('grants the outcome relay PutEvents only on the existing custom bus', () => {
+  const statements = policyStatementsForFunction('smartretailx-inventory-outcome-relay-dev');
+  const eventBridgeStatements = statements.filter((statement) =>
+    actionsFor(statement).some((action) => action.startsWith('events:')),
+  );
+
+  expect(eventBridgeStatements).toEqual([
+    {
+      Action: 'events:PutEvents',
+      Effect: 'Allow',
+      Resource: {
+        'Fn::ImportValue': expect.stringMatching(/OrderEventBus.*Arn/u),
+      },
+    },
+  ]);
+  expect(JSON.stringify(inventoryTemplate.toJSON())).not.toContain('AmazonEventBridgeFullAccess');
+});
+
+test('grants the outcome relay read-only access to the Reservations stream', () => {
+  const [reservationsTableLogicalId] = resourceEntry(
+    inventoryTemplate,
+    'AWS::DynamoDB::GlobalTable',
+    (resource) => propertiesOf(resource).TableName === 'smartretailx-inventory-reservations-dev',
+  );
+  const statements = policyStatementsForFunction('smartretailx-inventory-outcome-relay-dev');
+  const actions = statements.flatMap(actionsFor);
+  const streamStatements = statements.filter((statement) =>
+    actionsFor(statement).some((action) => action.startsWith('dynamodb:')),
+  );
+
+  expect(actions).toEqual(expect.arrayContaining(streamReadActions));
+  expect(streamStatements).not.toHaveLength(0);
+  for (const statement of streamStatements) {
+    expect(statement.Resource).toEqual({
+      'Fn::GetAtt': [reservationsTableLogicalId, 'StreamArn'],
+    });
+  }
+  expect(actions).not.toEqual(
+    expect.arrayContaining([
+      'dynamodb:GetItem',
+      'dynamodb:PutItem',
+      'dynamodb:UpdateItem',
+      'dynamodb:DeleteItem',
+      'dynamodb:Scan',
+      'dynamodb:Query',
+      'dynamodb:*',
+    ]),
+  );
+  expect(actions.some((action) => action.endsWith(':*'))).toBe(false);
+  expect(JSON.stringify(inventoryTemplate.toJSON())).not.toContain('AmazonDynamoDBFullAccess');
+});
+
+test('maps the Reservations stream to the outcome relay with bounded failure handling', () => {
+  const [reservationsTableLogicalId] = resourceEntry(
+    inventoryTemplate,
+    'AWS::DynamoDB::GlobalTable',
+    (resource) => propertiesOf(resource).TableName === 'smartretailx-inventory-reservations-dev',
+  );
+  const [failureQueueLogicalId] = resourceEntry(
+    inventoryTemplate,
+    'AWS::SQS::Queue',
+    (resource) =>
+      propertiesOf(resource).QueueName === 'smartretailx-inventory-outcome-relay-failures-dev',
+  );
+  const [relayFunctionLogicalId] = functionEntry('smartretailx-inventory-outcome-relay-dev');
+
+  inventoryTemplate.hasResourceProperties('AWS::Lambda::EventSourceMapping', {
+    BatchSize: 10,
+    BisectBatchOnFunctionError: true,
+    DestinationConfig: {
+      OnFailure: {
+        Destination: { 'Fn::GetAtt': [failureQueueLogicalId, 'Arn'] },
+      },
+    },
+    EventSourceArn: { 'Fn::GetAtt': [reservationsTableLogicalId, 'StreamArn'] },
+    FunctionName: { Ref: relayFunctionLogicalId },
+    FunctionResponseTypes: ['ReportBatchItemFailures'],
+    MaximumBatchingWindowInSeconds: 0,
+    MaximumRecordAgeInSeconds: 3600,
+    MaximumRetryAttempts: 3,
+    StartingPosition: 'TRIM_HORIZON',
+  });
+});
+
+test('creates encrypted Standard outcome-relay failure queues with terminal redrive', () => {
+  const [failureDlqLogicalId, failureDlq] = resourceEntry(
+    inventoryTemplate,
+    'AWS::SQS::Queue',
+    (resource) =>
+      propertiesOf(resource).QueueName === 'smartretailx-inventory-outcome-relay-failures-dlq-dev',
+  );
+  const [, failureQueue] = resourceEntry(
+    inventoryTemplate,
+    'AWS::SQS::Queue',
+    (resource) =>
+      propertiesOf(resource).QueueName === 'smartretailx-inventory-outcome-relay-failures-dev',
+  );
+
+  expect(propertiesOf(failureQueue)).toMatchObject({
+    MessageRetentionPeriod: 1_209_600,
+    QueueName: 'smartretailx-inventory-outcome-relay-failures-dev',
+    RedrivePolicy: {
+      deadLetterTargetArn: { 'Fn::GetAtt': [failureDlqLogicalId, 'Arn'] },
+      maxReceiveCount: 5,
+    },
+    SqsManagedSseEnabled: true,
+  });
+  expect(propertiesOf(failureQueue).FifoQueue).not.toBe(true);
+  expect(failureQueue.DeletionPolicy).toBe('Delete');
+  expect(propertiesOf(failureDlq)).toMatchObject({
+    MessageRetentionPeriod: 1_209_600,
+    QueueName: 'smartretailx-inventory-outcome-relay-failures-dlq-dev',
+    SqsManagedSseEnabled: true,
+  });
+  expect(propertiesOf(failureDlq)).not.toHaveProperty('RedrivePolicy');
+  expect(propertiesOf(failureDlq).FifoQueue).not.toBe(true);
+  expect(failureDlq.DeletionPolicy).toBe('Delete');
+});
+
+test('grants the outcome relay SendMessage only to its failure destination', () => {
+  const [failureQueueLogicalId] = resourceEntry(
+    inventoryTemplate,
+    'AWS::SQS::Queue',
+    (resource) =>
+      propertiesOf(resource).QueueName === 'smartretailx-inventory-outcome-relay-failures-dev',
+  );
+  const statements = policyStatementsForFunction('smartretailx-inventory-outcome-relay-dev');
+  const sqsStatements = statements.filter((statement) =>
+    actionsFor(statement).some((action) => action.startsWith('sqs:')),
+  );
+
+  expect(sqsStatements).toEqual([
+    {
+      Action: 'sqs:SendMessage',
+      Effect: 'Allow',
+      Resource: { 'Fn::GetAtt': [failureQueueLogicalId, 'Arn'] },
+    },
+  ]);
 });
 
 test('creates intended tags and safe outputs without unrelated resources', () => {
@@ -353,6 +583,10 @@ test('creates intended tags and safe outputs without unrelated resources', () =>
     'InventoryDlqName',
     'InventoryConsumerFunctionName',
     'InventoryOrderCreatedRuleName',
+    'InventoryReservationsStreamArn',
+    'InventoryOutcomeRelayFunctionName',
+    'InventoryOutcomeRelayFailureQueueName',
+    'InventoryOutcomeRelayFailureDlqName',
   ]) {
     inventoryTemplate.hasOutput(outputName, {});
   }
@@ -366,7 +600,10 @@ test('creates intended tags and safe outputs without unrelated resources', () =>
     'AWS::ElasticLoadBalancingV2::LoadBalancer',
     'AWS::RDS::DBInstance',
     'AWS::RDS::DBCluster',
+    'AWS::OpenSearchService::Domain',
+    'AWS::MSK::Cluster',
     'AWS::CloudFront::Distribution',
+    'AWS::Route53::HostedZone',
     'AWS::KMS::Key',
   ]) {
     inventoryTemplate.resourceCountIs(resourceType, 0);

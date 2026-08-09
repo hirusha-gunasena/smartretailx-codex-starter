@@ -21,8 +21,8 @@ Order Service
   -> [Task 011 CDK; not deployed] Inventory SQS queue and DLQ
   -> [Task 011 CDK; not deployed] Inventory Lambda
   -> [Task 011 CDK; not deployed] DynamoDB Inventory + Inventory Reservations tables
-  -> [Task 013 infrastructure pending] Inventory Reservations DynamoDB Stream
-  -> [Task 012 code; Task 013 Lambda resource pending] Inventory Outcome Relay
+  -> [Task 013 CDK; not deployed] Inventory Reservations NEW_IMAGE DynamoDB Stream
+  -> [Task 012 code + Task 013 CDK; not deployed] Inventory Outcome Relay
   -> Existing SmartRetailX EventBridge bus: InventoryReserved | InventoryRejected
        +--> [future] Order workflow consumer
        +--> [future] Notification consumer
@@ -64,13 +64,13 @@ write.
 Task 011 defines the precise OrderCreated rule, full-envelope SQS target, encrypted source queue and
 terminal DLQ, Inventory Lambda, both Inventory tables, event source mapping, and least-privilege IAM.
 The Lambda stays outside a VPC because SQS, DynamoDB, and CloudWatch are regional AWS service
-endpoints and no private resource requires VPC connectivity. The Reservations table has no stream;
-that stream and the Inventory outcome relay infrastructure remain deferred to Task 013. None of
-this infrastructure has been deployed.
+endpoints and no private resource requires VPC connectivity. The Task 011 Reservations table
+definition had no stream; Task 013 changes it to add a `NEW_IMAGE` stream and the Inventory outcome
+relay. None of this infrastructure has been deployed.
 
-Task 012 adds the Inventory outcome relay application and adapter code only. A future Reservations
-stream `INSERT` is unmarshalled and validated as the durable `InventoryReservation` source of truth,
-then maps `RESERVED` to canonical `InventoryReserved` and `REJECTED` to canonical
+Task 012 adds the Inventory outcome relay application and adapter code only. A future runtime
+Reservations stream `INSERT` is unmarshalled and validated as the durable `InventoryReservation`
+source of truth, then maps `RESERVED` to canonical `InventoryReserved` and `REJECTED` to canonical
 `InventoryRejected`. The mapping preserves the workflow correlation ID, uses durable `processedAt`
 as `occurredAt`, and derives a deterministic UUID v5 from outcome type and reservation identity.
 This supports at-least-once stream retries; future Order and Notification consumers must also be
@@ -78,9 +78,19 @@ idempotent by canonical event ID.
 
 The relay publishes to the existing custom bus with routing source
 `smartretailx.inventory-service` and returns failed stream sequence numbers through
-`batchItemFailures`. It ignores `MODIFY` and `REMOVE` in code. Task 013 must enable the Reservations
-stream, create the relay Lambda and permissions, and configure its event source mapping with
-`ReportBatchItemFailures`. Task 012 does not create or deploy any AWS resource.
+`batchItemFailures`. It ignores `MODIFY` and `REMOVE` in code.
+
+Task 013 defines the Reservations `NEW_IMAGE` stream, Node.js 22 relay Lambda, seven-day log group,
+and a `TRIM_HORIZON` event source mapping with batches of 10, `ReportBatchItemFailures`, three
+retries, batch bisection, and a one-hour maximum record age. Exhausted or expired records go to a
+dedicated SQS failure destination with a terminal DLQ. That destination contains Lambda invocation
+and failure metadata, not the complete original DynamoDB stream payload; S3 is the alternative when
+complete original invocation retention is required.
+
+The relay remains outside a VPC and reuses the existing cross-stack EventBridge bus. Its role can
+read only the Reservations stream, put events only on that bus, and send only to its failure
+destination. It has no Inventory table mutation permission. Future Order workflow and Notification
+consumers remain deferred, and Task 013 has not been deployed.
 
 ## Data ownership
 

@@ -31,7 +31,7 @@ const orderEventsStack = new OrderEventsStack(app, `${projectName}-${environment
 });
 
 new InventoryStack(app, `${projectName}-${environment}-Inventory`, {
-  description: 'SmartRetailX Inventory consumer infrastructure',
+  description: 'SmartRetailX Inventory consumer and outcome relay infrastructure',
   projectName,
   environmentName: environment,
   orderEventBus: orderEventsStack.eventBus,

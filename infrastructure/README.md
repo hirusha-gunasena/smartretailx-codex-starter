@@ -87,7 +87,7 @@ For the `dev` environment, this stack synthesizes:
 
 - `smartretailx-inventory-dev`, an on-demand Standard DynamoDB table keyed by string `productId`;
 - `smartretailx-inventory-reservations-dev`, an on-demand Standard DynamoDB table keyed by string
-  `eventId`;
+  `eventId`, with a `NEW_IMAGE` stream;
 - the SQS-managed encrypted `smartretailx-inventory-orders-dev` source queue with four-day
   retention and a 120-second visibility timeout;
 - the SQS-managed encrypted `smartretailx-inventory-orders-dlq-dev` terminal DLQ with 14-day
@@ -95,9 +95,15 @@ For the `dev` environment, this stack synthesizes:
 - a Node.js 22 Inventory consumer Lambda bundled from
   `services/inventory-service/src/handler.ts`, with 256 MB memory, a 15-second timeout, and a
   dedicated seven-day log group;
+- a Node.js 22 Inventory Outcome Relay Lambda bundled from
+  `services/inventory-service/src/inventory-outcome-relay.ts`, with 256 MB memory, a 10-second
+  timeout, and a dedicated seven-day log group;
+- the SQS-managed encrypted `smartretailx-inventory-outcome-relay-failures-dev` stream-failure
+  destination with 14-day retention and its terminal DLQ;
 - one precise EventBridge rule matching source `smartretailx.order-service` and detail type
   `OrderCreated`; and
-- the SQS event source mapping, least-privilege policies, queue resource policy, and safe outputs.
+- the SQS and DynamoDB stream event source mappings, least-privilege policies, queue resource
+  policy, and safe outputs.
 
 The CDK application creates `OrderEventsStack` first and passes its public event-bus construct to
 `InventoryStack`. This produces a cross-stack reference to the existing
@@ -123,16 +129,38 @@ application access to the DLQ. The EventBridge target helper's queue policy gran
 the single rule.
 
 Both tables use DynamoDB-owned encryption, have PITR and deletion protection disabled for dev, and
-use `DESTROY`. They have no sort keys, indexes, or streams, and no seed custom resource exists. The
-Reservations stream and Inventory outcome relay are deliberately deferred to Task 012.
+use `DESTROY`. They have no sort keys or indexes, no additional replicas, and no seed custom
+resource exists. Only the Reservations table has a stream; it uses `NEW_IMAGE` because the durable
+Reservation record contains the complete validated outcome required by the relay. The stock table
+has no stream.
 
-The Lambda is outside a VPC: SQS, DynamoDB, and CloudWatch do not require private application
-networking for this flow, and avoiding a VPC also avoids NAT Gateway cost. No dashboards, alarms,
-customer-managed KMS keys, or unrelated compute/networking resources are included. Production must
-review `RETAIN`, deletion protection, PITR, operational retention, and disaster-recovery settings.
+The Inventory Outcome Relay uses change data capture instead of publishing from the stock
+reservation transaction, avoiding a DynamoDB/EventBridge dual write. Its mapping starts at
+`TRIM_HORIZON`, uses batches of 10 with no added batching delay, enables
+`ReportBatchItemFailures`, bisects failed batches, retries three times, and discards records older
+than one hour to the dedicated failure destination. Stream delivery is at least once, so Task 012
+generates deterministic outcome event IDs and future Order and Notification consumers must remain
+idempotent by canonical `eventId`.
 
-Safe outputs expose both table names, source queue name and URL, DLQ name, function name, and rule
-name. These definitions have not been deployed.
+The relay receives only `INVENTORY_EVENT_BUS_NAME`, reusing the exact custom bus supplied by
+`OrderEventsStack`. Its application IAM is limited to `events:PutEvents` on that bus, stream-read
+operations on the Reservations stream, and `sqs:SendMessage` on its own failure destination. It has
+no Inventory table data-plane operations and no access to the Inventory business queue. No outcome
+EventBridge rules or downstream consumers are created in Task 013.
+
+The SQS stream on-failure destination stores Lambda invocation and failure metadata for exhausted
+or expired records; it must not be treated as a copy of the complete original DynamoDB stream
+payload. AWS also supports S3 as an on-failure destination when retaining the complete original
+invocation payload is required, but Task 013 does not add S3.
+
+Both Lambdas are outside a VPC: SQS, DynamoDB, EventBridge, and CloudWatch do not require private
+application networking for these flows, and avoiding a VPC also avoids NAT Gateway cost. No
+dashboards, alarms, customer-managed KMS keys, or unrelated compute/networking resources are
+included. Production must review `RETAIN`, deletion protection, PITR, operational retention, and
+disaster-recovery settings.
+
+Safe outputs additionally expose the Reservations stream ARN, outcome relay function name, and
+relay failure queue names. These definitions have not been deployed.
 
 ## Review commands
 
