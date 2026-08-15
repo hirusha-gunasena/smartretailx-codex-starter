@@ -10,10 +10,24 @@ export type {
   CatalogueHandler,
   CatalogueUseCases,
 } from './adapters/http/catalogue-handler.js';
-export { authorizeCatalogueRequest, CATALOGUE_ROLES } from './adapters/http/authorization.js';
+export {
+  AUTHORIZATION_REASON_CODES,
+  authorizeCatalogueRequest,
+  CATALOGUE_ROLES,
+  extractAuthorizationContext,
+  normalizeCognitoGroups,
+  writeAuthorizationDecisionLog,
+} from './adapters/http/authorization.js';
 export type {
+  AuthorizationContextExtractionResult,
+  AuthorizationDecisionLog,
+  AuthorizationDecisionLogger,
+  AuthorizationReasonCode,
+  AuthorizationRequestMetadata,
+  CatalogueAuthorizationContext,
   CatalogueJwtClaims,
   CatalogueRole,
+  JwtAuthorizerContext,
   JwtClaims,
 } from './adapters/http/authorization.js';
 

@@ -1,5 +1,6 @@
 import { createCatalogueHandler } from '../adapters/http/catalogue-handler.js';
 import type { CatalogueHandler, CatalogueUseCases } from '../adapters/http/catalogue-handler.js';
+import type { AuthorizationDecisionLogger } from '../adapters/http/authorization.js';
 import type { Clock } from '../application/ports/clock.js';
 import type { IdGenerator } from '../application/ports/id-generator.js';
 import type { ProductRepository } from '../application/ports/product-repository.js';
@@ -25,5 +26,9 @@ export const composeCatalogueHandler = (
   repository: ProductRepository,
   idGenerator: IdGenerator,
   clock: Clock,
+  authorizationLogger?: AuthorizationDecisionLogger,
 ): CatalogueHandler =>
-  createCatalogueHandler(createCatalogueUseCases(repository, idGenerator, clock));
+  createCatalogueHandler(
+    createCatalogueUseCases(repository, idGenerator, clock),
+    authorizationLogger,
+  );

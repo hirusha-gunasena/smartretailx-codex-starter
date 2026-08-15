@@ -7,7 +7,7 @@ import type {
 import { jest } from '@jest/globals';
 import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import { composeCatalogueHandler } from '../src/index.js';
-import type { CatalogueApiEvent, CatalogueHandler, JwtClaims } from '../src/index.js';
+import type { CatalogueApiEvent, CatalogueHandler, JwtAuthorizerContext } from '../src/index.js';
 import {
   AdjustableClock,
   FixedIdGenerator,
@@ -19,18 +19,33 @@ import {
 import { InMemoryProductRepository } from './support/in-memory-product-repository.js';
 
 const REQUEST_ID = 'api-request-123';
-const ADMIN_CLAIMS: JwtClaims = {
-  sub: 'admin-user-123',
-  token_use: 'access',
-  scope: 'openid email profile',
-  'cognito:groups': ['admin'],
+const ADMIN_JWT: JwtAuthorizerContext = {
+  claims: {
+    sub: 'admin-user-123',
+    token_use: 'access',
+    'cognito:groups': '[admin]',
+  },
+  scopes: ['openid', 'email', 'profile'],
 };
-const CUSTOMER_CLAIMS: JwtClaims = {
-  sub: 'customer-user-123',
-  token_use: 'access',
-  scope: 'openid email profile',
-  'cognito:groups': ['customer'],
+const CUSTOMER_JWT: JwtAuthorizerContext = {
+  claims: {
+    sub: 'customer-user-123',
+    token_use: 'access',
+    'cognito:groups': '[customer]',
+  },
+  scopes: ['openid', 'email', 'profile'],
 };
+
+const jwtWithGroups = (
+  jwtAuthorizer: JwtAuthorizerContext,
+  groups: string | string[],
+): JwtAuthorizerContext => ({
+  claims: {
+    ...(jwtAuthorizer.claims ?? {}),
+    'cognito:groups': groups,
+  },
+  ...(jwtAuthorizer.scopes === undefined ? {} : { scopes: jwtAuthorizer.scopes }),
+});
 
 const createEvent = (
   method: string,
@@ -39,7 +54,8 @@ const createEvent = (
     readonly body?: string;
     readonly productId?: string;
     readonly requestId?: string;
-    readonly claims?: JwtClaims | null;
+    readonly authorizationMode?: 'missing-authorizer' | 'missing-jwt';
+    readonly jwt?: JwtAuthorizerContext;
   } = {},
 ): CatalogueApiEvent => ({
   version: '2.0',
@@ -64,14 +80,15 @@ const createEvent = (
     stage: '$default',
     time: '08/Aug/2026:10:30:00 +0000',
     timeEpoch: 1_786_184_200_000,
-    ...(options.claims === null
+    ...(options.authorizationMode === 'missing-authorizer'
       ? {}
       : {
-          authorizer: {
-            jwt: {
-              claims: options.claims ?? ADMIN_CLAIMS,
-            },
-          },
+          authorizer:
+            options.authorizationMode === 'missing-jwt'
+              ? {}
+              : {
+                  jwt: options.jwt ?? ADMIN_JWT,
+                },
         }),
   },
   isBase64Encoded: false,
@@ -82,7 +99,12 @@ const createEvent = (
 const createHandler = (
   repository: InMemoryProductRepository = new InMemoryProductRepository(),
 ): CatalogueHandler =>
-  composeCatalogueHandler(repository, new FixedIdGenerator(), new AdjustableClock(UPDATED_AT));
+  composeCatalogueHandler(
+    repository,
+    new FixedIdGenerator(),
+    new AdjustableClock(UPDATED_AT),
+    () => undefined,
+  );
 
 const parseBody = <T>(response: APIGatewayProxyStructuredResultV2): T =>
   JSON.parse(response.body ?? 'null') as T;
@@ -91,14 +113,19 @@ describe('catalogue HTTP API handler', () => {
   test('GET /api/v1/products returns the product list', async () => {
     const handler = createHandler(new InMemoryProductRepository([productFixture()]));
 
-    const response = await handler(
-      createEvent('GET', '/api/v1/products', { claims: CUSTOMER_CLAIMS }),
-    );
+    const response = await handler(createEvent('GET', '/api/v1/products', { jwt: CUSTOMER_JWT }));
 
     expect(response.statusCode).toBe(200);
     expect(parseBody<ApiSuccessResponse<readonly Product[]>>(response).data).toEqual([
       productFixture(),
     ]);
+  });
+
+  test('GET /api/v1/products allows a realistic HTTP API v2 admin context', async () => {
+    const response = await createHandler()(createEvent('GET', '/api/v1/products'));
+
+    expect(response.statusCode).toBe(200);
+    expect(parseBody<ApiSuccessResponse<readonly Product[]>>(response).data).toEqual([]);
   });
 
   test('GET /api/v1/products/{id} returns a product', async () => {
@@ -107,7 +134,7 @@ describe('catalogue HTTP API handler', () => {
     const response = await handler(
       createEvent('GET', `/api/v1/products/${PRODUCT_ID}`, {
         productId: PRODUCT_ID,
-        claims: CUSTOMER_CLAIMS,
+        jwt: CUSTOMER_JWT,
       }),
     );
 
@@ -269,7 +296,7 @@ describe('catalogue HTTP API handler', () => {
     ['DELETE', `/api/v1/products/${PRODUCT_ID}`, { productId: PRODUCT_ID }],
   ] as const)('rejects customer %s writes with 403', async (method, rawPath, options) => {
     const response = await createHandler(new InMemoryProductRepository([productFixture()]))(
-      createEvent(method, rawPath, { ...options, claims: CUSTOMER_CLAIMS }),
+      createEvent(method, rawPath, { ...options, jwt: CUSTOMER_JWT }),
     );
 
     expect(response.statusCode).toBe(403);
@@ -290,20 +317,20 @@ describe('catalogue HTTP API handler', () => {
       handler(
         createEvent('POST', '/api/v1/products', {
           body: JSON.stringify(createProductRequest()),
-          claims: CUSTOMER_CLAIMS,
+          jwt: CUSTOMER_JWT,
         }),
       ),
       handler(
         createEvent('PATCH', `/api/v1/products/${PRODUCT_ID}`, {
           body: JSON.stringify({ price: 69.99 }),
           productId: PRODUCT_ID,
-          claims: CUSTOMER_CLAIMS,
+          jwt: CUSTOMER_JWT,
         }),
       ),
       handler(
         createEvent('DELETE', `/api/v1/products/${PRODUCT_ID}`, {
           productId: PRODUCT_ID,
-          claims: CUSTOMER_CLAIMS,
+          jwt: CUSTOMER_JWT,
         }),
       ),
     ]);
@@ -323,7 +350,7 @@ describe('catalogue HTTP API handler', () => {
       const response = await createHandler(new InMemoryProductRepository([productFixture()]))(
         createEvent(method, rawPath, {
           ...options,
-          claims: { ...CUSTOMER_CLAIMS, 'cognito:groups': ['support'] },
+          jwt: jwtWithGroups(CUSTOMER_JWT, '[support]'),
         }),
       );
 
@@ -337,17 +364,33 @@ describe('catalogue HTTP API handler', () => {
     const listSpy = jest.spyOn(repository, 'list');
 
     const response = await createHandler(repository)(
-      createEvent('GET', '/api/v1/products', { claims: null }),
+      createEvent('GET', '/api/v1/products', { authorizationMode: 'missing-authorizer' }),
     );
 
     expect(response.statusCode).toBe(403);
     expect(listSpy).not.toHaveBeenCalled();
   });
 
+  test('denies an HTTP API event with an authorizer but no jwt context', async () => {
+    const response = await createHandler()(
+      createEvent('GET', '/api/v1/products', { authorizationMode: 'missing-jwt' }),
+    );
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  test('denies an HTTP API jwt context with no claims', async () => {
+    const response = await createHandler()(
+      createEvent('GET', '/api/v1/products', { jwt: { scopes: ['openid'] } }),
+    );
+
+    expect(response.statusCode).toBe(403);
+  });
+
   test('rejects malformed group claims with 403', async () => {
     const response = await createHandler()(
       createEvent('GET', '/api/v1/products', {
-        claims: { ...CUSTOMER_CLAIMS, 'cognito:groups': 'customer' },
+        jwt: jwtWithGroups(CUSTOMER_JWT, 'customer'),
       }),
     );
 

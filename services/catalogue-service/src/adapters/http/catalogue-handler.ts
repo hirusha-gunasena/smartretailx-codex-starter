@@ -14,7 +14,12 @@ import {
   parseProductId,
   parseUpdateProductRequest,
 } from './request-parser.js';
-import { authorizeCatalogueRequest, CATALOGUE_ROLES, type JwtClaims } from './authorization.js';
+import {
+  authorizeCatalogueRequest,
+  CATALOGUE_ROLES,
+  writeAuthorizationDecisionLog,
+} from './authorization.js';
+import type { AuthorizationDecisionLogger, JwtAuthorizerContext } from './authorization.js';
 import {
   errorResponse,
   mapErrorToResponse,
@@ -33,9 +38,7 @@ export interface CatalogueUseCases {
 export type CatalogueApiEvent = Omit<APIGatewayProxyEventV2, 'requestContext'> & {
   readonly requestContext: APIGatewayProxyEventV2['requestContext'] & {
     readonly authorizer?: {
-      readonly jwt?: {
-        readonly claims?: JwtClaims;
-      };
+      readonly jwt?: JwtAuthorizerContext;
     };
   };
 };
@@ -49,21 +52,35 @@ const PRODUCT_PATH_PATTERN = /^\/api\/v1\/products\/[^/]+$/;
 const READ_ROLES = new Set([CATALOGUE_ROLES.customer, CATALOGUE_ROLES.admin]);
 const WRITE_ROLES = new Set([CATALOGUE_ROLES.admin]);
 
-export const createCatalogueHandler = (useCases: CatalogueUseCases): CatalogueHandler =>
+export const createCatalogueHandler = (
+  useCases: CatalogueUseCases,
+  authorizationLogger: AuthorizationDecisionLogger = writeAuthorizationDecisionLog,
+): CatalogueHandler =>
   async function catalogueHandler(event) {
     const requestId = event.requestContext.requestId || 'unavailable';
     const method = event.requestContext.http.method.toUpperCase();
-    const claims = event.requestContext.authorizer?.jwt?.claims;
+    const jwtAuthorizer = event.requestContext.authorizer?.jwt;
+    const authorizationMetadata = { requestId, routeKey: event.routeKey };
 
     try {
       if (method === 'GET' && event.rawPath === PRODUCTS_PATH) {
-        authorizeCatalogueRequest(claims, READ_ROLES);
+        authorizeCatalogueRequest(
+          jwtAuthorizer,
+          READ_ROLES,
+          authorizationMetadata,
+          authorizationLogger,
+        );
         const products: readonly Product[] = await useCases.listProducts.execute();
         return successResponse(200, products, requestId);
       }
 
       if (method === 'POST' && event.rawPath === PRODUCTS_PATH) {
-        authorizeCatalogueRequest(claims, WRITE_ROLES);
+        authorizeCatalogueRequest(
+          jwtAuthorizer,
+          WRITE_ROLES,
+          authorizationMetadata,
+          authorizationLogger,
+        );
         const request: CreateProductRequest = parseCreateProductRequest(event);
         const product = await useCases.createProduct.execute(request);
         return successResponse(201, product, requestId);
@@ -71,14 +88,24 @@ export const createCatalogueHandler = (useCases: CatalogueUseCases): CatalogueHa
 
       if (PRODUCT_PATH_PATTERN.test(event.rawPath)) {
         if (method === 'GET') {
-          authorizeCatalogueRequest(claims, READ_ROLES);
+          authorizeCatalogueRequest(
+            jwtAuthorizer,
+            READ_ROLES,
+            authorizationMetadata,
+            authorizationLogger,
+          );
           const productId = parseProductId(event);
           const product = await useCases.getProduct.execute(productId);
           return successResponse(200, product, requestId);
         }
 
         if (method === 'PATCH') {
-          authorizeCatalogueRequest(claims, WRITE_ROLES);
+          authorizeCatalogueRequest(
+            jwtAuthorizer,
+            WRITE_ROLES,
+            authorizationMetadata,
+            authorizationLogger,
+          );
           const productId = parseProductId(event);
           const request: UpdateProductRequest = parseUpdateProductRequest(event);
           const product = await useCases.updateProduct.execute(productId, request);
@@ -86,7 +113,12 @@ export const createCatalogueHandler = (useCases: CatalogueUseCases): CatalogueHa
         }
 
         if (method === 'DELETE') {
-          authorizeCatalogueRequest(claims, WRITE_ROLES);
+          authorizeCatalogueRequest(
+            jwtAuthorizer,
+            WRITE_ROLES,
+            authorizationMetadata,
+            authorizationLogger,
+          );
           const productId = parseProductId(event);
           await useCases.deleteProduct.execute(productId);
           return noContentResponse();
