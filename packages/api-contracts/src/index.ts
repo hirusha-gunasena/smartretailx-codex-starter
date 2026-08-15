@@ -9,6 +9,9 @@ export {
 } from './product.js';
 export type { CreateProductRequest, OrderItem, Product, UpdateProductRequest } from './product.js';
 
+export { createOrderBodySchema } from './create-order-body.js';
+export type { CreateOrderBody } from './create-order-body.js';
+
 export {
   confirmedOrderSchema,
   createOrderRequestSchema,

@@ -1,7 +1,9 @@
 import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
-import { GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import type {
   DynamoDBDocumentClient,
+  QueryCommandInput,
+  QueryCommandOutput,
   ScanCommandInput,
   ScanCommandOutput,
 } from '@aws-sdk/lib-dynamodb';
@@ -12,6 +14,8 @@ import { copyOrder } from '../../domain/order.js';
 
 const isConditionalFailure = (error: unknown): error is ConditionalCheckFailedException =>
   error instanceof ConditionalCheckFailedException;
+
+export const CUSTOMER_ORDERS_INDEX_NAME = 'customerId-createdAt-index';
 
 export class DynamoDBOrderRepository implements OrderRepository {
   public constructor(
@@ -57,7 +61,7 @@ export class DynamoDBOrderRepository implements OrderRepository {
     return copyOrder(orderSchema.parse(output.Item));
   }
 
-  public async list(): Promise<readonly Order[]> {
+  public async listAll(): Promise<readonly Order[]> {
     const orders: Order[] = [];
     let exclusiveStartKey: ScanCommandOutput['LastEvaluatedKey'];
 
@@ -67,6 +71,31 @@ export class DynamoDBOrderRepository implements OrderRepository {
         ...(exclusiveStartKey === undefined ? {} : { ExclusiveStartKey: exclusiveStartKey }),
       };
       const output = await this.documentClient.send(new ScanCommand(input));
+
+      for (const item of output.Items ?? []) {
+        orders.push(copyOrder(orderSchema.parse(item)));
+      }
+
+      exclusiveStartKey = output.LastEvaluatedKey;
+    } while (exclusiveStartKey !== undefined && Object.keys(exclusiveStartKey).length > 0);
+
+    return orders;
+  }
+
+  public async listByCustomerId(customerId: string): Promise<readonly Order[]> {
+    const orders: Order[] = [];
+    let exclusiveStartKey: QueryCommandOutput['LastEvaluatedKey'];
+
+    do {
+      const input: QueryCommandInput = {
+        TableName: this.tableName,
+        IndexName: CUSTOMER_ORDERS_INDEX_NAME,
+        KeyConditionExpression: '#customerId = :customerId',
+        ExpressionAttributeNames: { '#customerId': 'customerId' },
+        ExpressionAttributeValues: { ':customerId': customerId },
+        ...(exclusiveStartKey === undefined ? {} : { ExclusiveStartKey: exclusiveStartKey }),
+      };
+      const output = await this.documentClient.send(new QueryCommand(input));
 
       for (const item of output.Items ?? []) {
         orders.push(copyOrder(orderSchema.parse(item)));

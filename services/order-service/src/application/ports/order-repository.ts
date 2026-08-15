@@ -7,5 +7,6 @@ import type { Order } from '@smartretailx/api-contracts';
 export interface OrderRepository {
   create(order: Order): Promise<boolean>;
   findById(orderId: string): Promise<Order | null>;
-  list(): Promise<readonly Order[]>;
+  listAll(): Promise<readonly Order[]>;
+  listByCustomerId(customerId: string): Promise<readonly Order[]>;
 }

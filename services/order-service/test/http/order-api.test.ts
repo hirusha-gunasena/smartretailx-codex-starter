@@ -4,19 +4,32 @@ import request from 'supertest';
 import { InMemoryOrderRepository, createApp } from '../../src/index.js';
 import type { OrderRepository } from '../../src/index.js';
 import {
+  OTHER_CUSTOMER_ID,
   FixedClock,
   FixedIdGenerator,
   ORDER_ID,
   SECOND_ORDER_ID,
-  createOrderRequest,
+  createOrderBody,
   orderFixture,
 } from '../support/fixtures.js';
+import {
+  ADMIN_AUTHORIZATION,
+  CUSTOMER_AUTHORIZATION,
+  OTHER_CUSTOMER_AUTHORIZATION,
+  CapturingOrderAuthorizationTelemetry,
+  TestOrderCallerAuthenticator,
+} from '../support/authorization.js';
 
-const createTestApp = (repository: OrderRepository = new InMemoryOrderRepository()) =>
+const createTestApp = (
+  repository: OrderRepository = new InMemoryOrderRepository(),
+  telemetry = new CapturingOrderAuthorizationTelemetry(),
+) =>
   createApp({
     repository,
     idGenerator: new FixedIdGenerator(),
     clock: new FixedClock(),
+    callerAuthenticator: new TestOrderCallerAuthenticator(),
+    authorizationTelemetry: telemetry,
   });
 
 describe('Order Service HTTP API', () => {
@@ -33,8 +46,9 @@ describe('Order Service HTTP API', () => {
   test('POST /api/v1/orders creates an order with 201', async () => {
     const response = await request(createTestApp())
       .post('/api/v1/orders')
+      .set('Authorization', CUSTOMER_AUTHORIZATION)
       .set('x-request-id', 'create-request')
-      .send(createOrderRequest());
+      .send(createOrderBody());
     const body = response.body as ApiSuccessResponse<Order>;
 
     expect(response.status).toBe(201);
@@ -49,8 +63,9 @@ describe('Order Service HTTP API', () => {
   test('POST /api/v1/orders rejects malformed JSON with 400', async () => {
     const response = await request(createTestApp())
       .post('/api/v1/orders')
+      .set('Authorization', CUSTOMER_AUTHORIZATION)
       .set('Content-Type', 'application/json')
-      .send('{"customerId":');
+      .send('{"items":');
     const body = response.body as ApiErrorResponse;
 
     expect(response.status).toBe(400);
@@ -58,11 +73,10 @@ describe('Order Service HTTP API', () => {
   });
 
   test('POST /api/v1/orders rejects an invalid body with 400', async () => {
-    const response = await request(createTestApp()).post('/api/v1/orders').send({
-      customerId: 'not-a-uuid',
-      items: [],
-      currency: 'usd',
-    });
+    const response = await request(createTestApp())
+      .post('/api/v1/orders')
+      .set('Authorization', CUSTOMER_AUTHORIZATION)
+      .send({ items: [], currency: 'usd' });
     const body = response.body as ApiErrorResponse;
 
     expect(response.status).toBe(400);
@@ -72,8 +86,10 @@ describe('Order Service HTTP API', () => {
   test('POST /api/v1/orders rejects client-supplied protected fields', async () => {
     const response = await request(createTestApp())
       .post('/api/v1/orders')
+      .set('Authorization', CUSTOMER_AUTHORIZATION)
       .send({
-        ...createOrderRequest(),
+        ...createOrderBody(),
+        customerId: OTHER_CUSTOMER_ID,
         orderId: ORDER_ID,
         totalAmount: 0,
         status: 'CONFIRMED',
@@ -87,8 +103,23 @@ describe('Order Service HTTP API', () => {
     expect((response.body as ApiErrorResponse).error.code).toBe('VALIDATION_ERROR');
   });
 
+  test('POST rejects client-supplied customerId without calling persistence', async () => {
+    const repository = new InMemoryOrderRepository();
+    const create = jest.spyOn(repository, 'create');
+    const response = await request(createTestApp(repository))
+      .post('/api/v1/orders')
+      .set('Authorization', CUSTOMER_AUTHORIZATION)
+      .send({ ...createOrderBody(), customerId: OTHER_CUSTOMER_ID });
+
+    expect(response.status).toBe(400);
+    expect((response.body as ApiErrorResponse).error.code).toBe('VALIDATION_ERROR');
+    expect(create).not.toHaveBeenCalled();
+  });
+
   test('GET /api/v1/orders returns an empty list', async () => {
-    const response = await request(createTestApp()).get('/api/v1/orders');
+    const response = await request(createTestApp())
+      .get('/api/v1/orders')
+      .set('Authorization', CUSTOMER_AUTHORIZATION);
     const body = response.body as ApiSuccessResponse<readonly Order[]>;
 
     expect(response.status).toBe(200);
@@ -100,7 +131,9 @@ describe('Order Service HTTP API', () => {
       orderFixture(),
       orderFixture({ orderId: SECOND_ORDER_ID }),
     ]);
-    const response = await request(createTestApp(repository)).get('/api/v1/orders');
+    const response = await request(createTestApp(repository))
+      .get('/api/v1/orders')
+      .set('Authorization', ADMIN_AUTHORIZATION);
     const body = response.body as ApiSuccessResponse<readonly Order[]>;
 
     expect(response.status).toBe(200);
@@ -109,14 +142,18 @@ describe('Order Service HTTP API', () => {
 
   test('GET /api/v1/orders/:orderId returns an existing order', async () => {
     const repository = new InMemoryOrderRepository([orderFixture()]);
-    const response = await request(createTestApp(repository)).get(`/api/v1/orders/${ORDER_ID}`);
+    const response = await request(createTestApp(repository))
+      .get(`/api/v1/orders/${ORDER_ID}`)
+      .set('Authorization', CUSTOMER_AUTHORIZATION);
 
     expect(response.status).toBe(200);
     expect((response.body as ApiSuccessResponse<Order>).data).toEqual(orderFixture());
   });
 
   test('GET /api/v1/orders/:orderId returns 404 for a missing order', async () => {
-    const response = await request(createTestApp()).get(`/api/v1/orders/${ORDER_ID}`);
+    const response = await request(createTestApp())
+      .get(`/api/v1/orders/${ORDER_ID}`)
+      .set('Authorization', CUSTOMER_AUTHORIZATION);
 
     expect(response.status).toBe(404);
     expect((response.body as ApiErrorResponse).error).toEqual({
@@ -126,7 +163,9 @@ describe('Order Service HTTP API', () => {
   });
 
   test('GET /api/v1/orders/:orderId returns 400 for an invalid UUID', async () => {
-    const response = await request(createTestApp()).get('/api/v1/orders/not-a-uuid');
+    const response = await request(createTestApp())
+      .get('/api/v1/orders/not-a-uuid')
+      .set('Authorization', CUSTOMER_AUTHORIZATION);
 
     expect(response.status).toBe(400);
     expect((response.body as ApiErrorResponse).error.code).toBe('VALIDATION_ERROR');
@@ -134,9 +173,11 @@ describe('Order Service HTTP API', () => {
 
   test('unexpected failures return a generic 500 without a stack trace', async () => {
     const repository = new InMemoryOrderRepository();
-    jest.spyOn(repository, 'list').mockRejectedValue(new Error('sensitive storage detail'));
+    jest.spyOn(repository, 'listAll').mockRejectedValue(new Error('sensitive storage detail'));
 
-    const response = await request(createTestApp(repository)).get('/api/v1/orders');
+    const response = await request(createTestApp(repository))
+      .get('/api/v1/orders')
+      .set('Authorization', ADMIN_AUTHORIZATION);
     const body = response.body as ApiErrorResponse;
 
     expect(response.status).toBe(500);
@@ -146,5 +187,109 @@ describe('Order Service HTTP API', () => {
     });
     expect(response.text).not.toContain('sensitive storage detail');
     expect(response.text).not.toContain('Error:');
+  });
+
+  test('business routes reject a missing bearer token with 401', async () => {
+    const response = await request(createTestApp()).get('/api/v1/orders');
+
+    expect(response.status).toBe(401);
+    expect((response.body as ApiErrorResponse).error.code).toBe('UNAUTHORIZED');
+  });
+
+  test('business routes reject an invalid bearer token with 401', async () => {
+    const response = await request(createTestApp())
+      .get('/api/v1/orders')
+      .set('Authorization', 'Bearer invalid-test-token');
+
+    expect(response.status).toBe(401);
+    expect((response.body as ApiErrorResponse).error.code).toBe('UNAUTHORIZED');
+  });
+
+  test('business routes reject invalid or ambiguous group semantics with 403', async () => {
+    const response = await request(createTestApp())
+      .get('/api/v1/orders')
+      .set('Authorization', 'Bearer invalid-groups-test-token');
+
+    expect(response.status).toBe(403);
+    expect((response.body as ApiErrorResponse).error.code).toBe('FORBIDDEN');
+  });
+
+  test('admin POST is denied before repository create', async () => {
+    const repository = new InMemoryOrderRepository();
+    const create = jest.spyOn(repository, 'create');
+
+    const response = await request(createTestApp(repository))
+      .post('/api/v1/orders')
+      .set('Authorization', ADMIN_AUTHORIZATION)
+      .send(createOrderBody());
+
+    expect(response.status).toBe(403);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  test('customer list excludes another customer order', async () => {
+    const ownOrder = orderFixture();
+    const otherOrder = orderFixture({
+      orderId: SECOND_ORDER_ID,
+      customerId: OTHER_CUSTOMER_ID,
+    });
+    const response = await request(
+      createTestApp(new InMemoryOrderRepository([ownOrder, otherOrder])),
+    )
+      .get('/api/v1/orders')
+      .set('Authorization', CUSTOMER_AUTHORIZATION);
+
+    expect(response.status).toBe(200);
+    expect((response.body as ApiSuccessResponse<readonly Order[]>).data).toEqual([ownOrder]);
+  });
+
+  test('customer receives indistinguishable 404 responses for absent and non-owned orders', async () => {
+    const app = createTestApp(new InMemoryOrderRepository([orderFixture()]));
+    const nonOwned = await request(app)
+      .get(`/api/v1/orders/${ORDER_ID}`)
+      .set('Authorization', OTHER_CUSTOMER_AUTHORIZATION);
+    const absent = await request(app)
+      .get(`/api/v1/orders/${SECOND_ORDER_ID}`)
+      .set('Authorization', OTHER_CUSTOMER_AUTHORIZATION);
+
+    expect(nonOwned.status).toBe(404);
+    expect(absent.status).toBe(404);
+    expect((nonOwned.body as ApiErrorResponse).error).toEqual(
+      (absent.body as ApiErrorResponse).error,
+    );
+  });
+
+  test('admin can read an existing customer order', async () => {
+    const response = await request(createTestApp(new InMemoryOrderRepository([orderFixture()])))
+      .get(`/api/v1/orders/${ORDER_ID}`)
+      .set('Authorization', ADMIN_AUTHORIZATION);
+
+    expect(response.status).toBe(200);
+  });
+
+  test('authorization telemetry records safe allow and ownership-deny evidence', async () => {
+    const telemetry = new CapturingOrderAuthorizationTelemetry();
+    await request(createTestApp(new InMemoryOrderRepository([orderFixture()]), telemetry))
+      .get(`/api/v1/orders/${ORDER_ID}`)
+      .set('Authorization', OTHER_CUSTOMER_AUTHORIZATION);
+
+    expect(telemetry.entries).toEqual([
+      expect.objectContaining({
+        decision: 'ALLOW',
+        reasonCode: 'AUTH_ALLOWED',
+        role: 'customer',
+        subjectPresent: true,
+        method: 'GET',
+        route: '/api/v1/orders/:orderId',
+      }),
+      expect.objectContaining({
+        decision: 'DENY',
+        reasonCode: 'AUTH_OWNERSHIP_MISMATCH',
+        role: 'customer',
+      }),
+    ]);
+    expect(JSON.stringify(telemetry.entries)).not.toMatch(
+      /other-customer-test-token|opaque-customer|bearer|email|password|request body/iu,
+    );
   });
 });

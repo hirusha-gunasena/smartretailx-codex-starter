@@ -1,14 +1,18 @@
 import type {
   ConfirmedOrder,
+  CreateOrderBody,
   CreateOrderRequest,
   PendingOrder,
   RejectedOrder,
 } from '@smartretailx/api-contracts';
-import type { Clock, IdGenerator } from '../../src/index.js';
+import type { Clock, IdGenerator, VerifiedOrderCaller } from '../../src/index.js';
 
 export const ORDER_ID = '550e8400-e29b-41d4-a716-446655440010';
 export const SECOND_ORDER_ID = '550e8400-e29b-41d4-a716-446655440011';
-export const CUSTOMER_ID = '550e8400-e29b-41d4-a716-446655440012';
+export const CUSTOMER_SUBJECT = 'opaque-customer-subject';
+export const OTHER_CUSTOMER_SUBJECT = 'other-customer-subject';
+export const CUSTOMER_ID = 'e3a28252-e413-5d5b-87ac-b2e04d75a62f';
+export const OTHER_CUSTOMER_ID = '21edc522-131e-5be5-870a-911b2dfa4fbe';
 export const PRODUCT_ID = '550e8400-e29b-41d4-a716-446655440013';
 export const SECOND_PRODUCT_ID = '550e8400-e29b-41d4-a716-446655440014';
 export const CREATED_AT = '2026-08-09T08:30:00.000Z';
@@ -23,6 +27,27 @@ export const createOrderRequest = (
   currency: 'USD',
   ...overrides,
 });
+
+export const createOrderBody = (overrides: Partial<CreateOrderBody> = {}): CreateOrderBody => ({
+  items: [{ productId: PRODUCT_ID, quantity: 2, unitPrice: 79.99 }],
+  currency: 'USD',
+  ...overrides,
+});
+
+export const CUSTOMER_CALLER: VerifiedOrderCaller = {
+  subject: CUSTOMER_SUBJECT,
+  role: 'customer',
+};
+
+export const OTHER_CUSTOMER_CALLER: VerifiedOrderCaller = {
+  subject: OTHER_CUSTOMER_SUBJECT,
+  role: 'customer',
+};
+
+export const ADMIN_CALLER: VerifiedOrderCaller = {
+  subject: 'opaque-admin-subject',
+  role: 'admin',
+};
 
 export const orderFixture = (overrides: Partial<PendingOrder> = {}): PendingOrder => ({
   orderId: ORDER_ID,

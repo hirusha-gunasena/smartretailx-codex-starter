@@ -63,6 +63,18 @@ export class OrderEventsStack extends cdk.Stack {
       encryption: dynamodb.TableEncryptionV2.dynamoOwnedKey(),
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
+    this.ordersTable.addGlobalSecondaryIndex({
+      indexName: 'customerId-createdAt-index',
+      partitionKey: {
+        name: 'customerId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'createdAt',
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
     const ordersTable = this.ordersTable;
     const ordersTableStreamArn = ordersTable.tableStreamArn;
     if (ordersTableStreamArn === undefined) {

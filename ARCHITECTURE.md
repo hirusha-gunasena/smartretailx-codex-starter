@@ -209,6 +209,71 @@ library or JWKS fetch path to the Lambda.
 Task018 is implemented and synth-tested locally. It has not been deployed and has not created a User
 Pool, client, domain, group or user in AWS.
 
+## Task024 secure Order API infrastructure
+
+Task024 adds local CDK definitions for two separately deployable stacks. `OrderRegistryStack` owns
+the private ECR repository, while `OrderServiceStack` consumes an explicitly configured immutable
+image tag and reuses the existing Cognito issuer/client and `smartretailx-orders-dev` table. The
+existing Order lifecycle relay, EventBridge bus, Inventory path and Order Workflow remain owned by
+their current stacks.
+
+```text
+Browser/client
+  -> Order HTTP API
+  -> Cognito JWT authorizer
+  -> VPC Link
+  -> internal Application Load Balancer
+  -> Fargate Order Express access-token verification
+  -> exact-group RBAC and object ownership
+  -> existing Orders DynamoDB table
+  -> existing Orders stream / Saga lifecycle
+```
+
+The ALB is internal so it is not an alternate public path around API Gateway authentication. A
+dedicated security-group chain permits only VPC Link to ALB on port 80 and ALB to tasks on port
+3000; the task port has no internet ingress. For the bounded development environment, Fargate tasks
+run in two public subnets with public IPs so they can pull from ECR and reach regional AWS public
+endpoints without a NAT Gateway. The public IP supplies outbound connectivity only: security-group
+ingress remains restricted to the internal ALB. A production design should reassess private
+subnets, VPC endpoints/NAT, egress restrictions, availability and cost.
+
+The external API exposes only the three existing Order application routes. Every route requires the
+existing Cognito JWT authorizer and `openid` scope; `/health` is reachable only through the internal
+load-balancer target group. API Gateway overwrites the private-integration path with
+`$request.path`, preventing the `$default` stage name from being forwarded to Express.
+
+Task025 adds the application authorization boundary behind the API JWT authorizer. The container
+verifies the original bearer access token with `aws-jwt-verify` against the configured existing User
+Pool, public SPA client, `token_use=access`, expiry, signature and `openid` scope. Only an exact
+single `customer` or `admin` group is accepted. The application carries only the verified opaque
+subject and normalized role; it does not trust identity headers from the client or API integration.
+
+Application identity translation deterministically maps the opaque Cognito subject to the domain's
+UUID `customerId` using UUID v5: a DNS-namespaced
+`customers.smartretailx.internal` namespace, then `UUIDv5("cognito:" + subject, namespace)`.
+Customers can create Orders only for that derived identity, list only their partition through the
+single `customerId-createdAt-index` GSI, and retrieve only owned Orders. A non-owner lookup returns
+the same not-found response as an absent Order. Admins can list/read all Orders but cannot create a
+customer Order. The list API remains unpaginated; repository adapters collect every DynamoDB page.
+
+The GSI belongs to the existing OrderEvents-owned GlobalTable, uses `customerId` / `createdAt` string
+keys and `ALL` projection, and does not change the primary key, on-demand billing, stream or replica.
+Admin list retains the existing Scan path. The existing DynamoDB Stream remains the sole lifecycle
+publication path; the Order API still has no direct EventBridge permission. Task025 is local-only:
+the GSI, Task024 stacks and Order image have not been deployed or pushed.
+
+```text
+Customer list: verified subject -> UUID v5 customerId -> customerId-createdAt-index -> Query
+Admin list:    verified admin role -> Orders base table -> Scan
+Create:        derived customerId -> PutItem PENDING -> DynamoDB Stream -> lifecycle relay -> EventBridge
+```
+
+The authentication/application design is container-platform neutral. A future EKS deployment can
+reuse the same bearer-token, Cognito verifier, RBAC, ownership and DynamoDB logic while changing
+only the infrastructure workload-IAM mechanism; the code does not depend on ECS metadata,
+cluster/service identity, ECS Exec, instance identity or ALB authentication headers. Task025 adds
+no Kubernetes or EKS resources.
+
 ## Data ownership
 
 | Service          | Primary store                        | Ownership                  |

@@ -38,12 +38,26 @@ const actionsFor = (statement: Record<string, unknown>): string[] => {
     : [];
 };
 
-test('creates one development Orders table with NEW_AND_OLD_IMAGES stream and no indexes', () => {
+test('creates one development Orders GlobalTable with the one customer access GSI', () => {
   template.resourceCountIs('AWS::DynamoDB::GlobalTable', 1);
   template.hasResourceProperties('AWS::DynamoDB::GlobalTable', {
-    AttributeDefinitions: [{ AttributeName: 'orderId', AttributeType: 'S' }],
+    AttributeDefinitions: [
+      { AttributeName: 'orderId', AttributeType: 'S' },
+      { AttributeName: 'customerId', AttributeType: 'S' },
+      { AttributeName: 'createdAt', AttributeType: 'S' },
+    ],
     BillingMode: 'PAY_PER_REQUEST',
     KeySchema: [{ AttributeName: 'orderId', KeyType: 'HASH' }],
+    GlobalSecondaryIndexes: [
+      {
+        IndexName: 'customerId-createdAt-index',
+        KeySchema: [
+          { AttributeName: 'customerId', KeyType: 'HASH' },
+          { AttributeName: 'createdAt', KeyType: 'RANGE' },
+        ],
+        Projection: { ProjectionType: 'ALL' },
+      },
+    ],
     Replicas: [
       Match.objectLike({
         DeletionProtectionEnabled: false,
@@ -60,7 +74,7 @@ test('creates one development Orders table with NEW_AND_OLD_IMAGES stream and no
   const table = Object.values(template.findResources('AWS::DynamoDB::GlobalTable'))[0];
   expect(table).toBeDefined();
   expect(table?.Properties.Replicas).toHaveLength(1);
-  expect(table?.Properties).not.toHaveProperty('GlobalSecondaryIndexes');
+  expect(table?.Properties.GlobalSecondaryIndexes).toHaveLength(1);
   expect(table?.Properties).not.toHaveProperty('LocalSecondaryIndexes');
   expect(table?.DeletionPolicy).toBe('Delete');
 });

@@ -16,7 +16,12 @@ export class RandomUuidGenerator implements IdGenerator {
   }
 }
 
-export const createInMemoryDependencies = (): OrderAppDependencies => ({
+export type InMemoryOrderDependencies = Pick<
+  OrderAppDependencies,
+  'clock' | 'idGenerator' | 'repository'
+>;
+
+export const createInMemoryDependencies = (): InMemoryOrderDependencies => ({
   repository: new InMemoryOrderRepository(),
   idGenerator: new RandomUuidGenerator(),
   clock: new SystemClock(),

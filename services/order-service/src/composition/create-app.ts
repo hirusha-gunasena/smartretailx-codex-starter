@@ -5,6 +5,8 @@ import { errorBoundary, routeNotFound } from '../adapters/http/response-mapper.j
 import type { Clock } from '../application/ports/clock.js';
 import type { IdGenerator } from '../application/ports/id-generator.js';
 import type { OrderRepository } from '../application/ports/order-repository.js';
+import type { OrderAuthorizationTelemetry } from '../application/ports/order-authorization-telemetry.js';
+import type { OrderCallerAuthenticator } from '../application/ports/order-caller-authenticator.js';
 import { CreateOrder } from '../application/create-order.js';
 import { GetOrder } from '../application/get-order.js';
 import { ListOrders } from '../application/list-orders.js';
@@ -13,6 +15,8 @@ export interface OrderAppDependencies {
   readonly repository: OrderRepository;
   readonly idGenerator: IdGenerator;
   readonly clock: Clock;
+  readonly callerAuthenticator: OrderCallerAuthenticator;
+  readonly authorizationTelemetry: OrderAuthorizationTelemetry;
 }
 
 export const createApp = (dependencies: OrderAppDependencies): Express => {
@@ -35,7 +39,13 @@ export const createApp = (dependencies: OrderAppDependencies): Express => {
       service: 'order-service',
     });
   });
-  app.use('/api/v1/orders', createOrderRouter(useCases));
+  app.use(
+    '/api/v1/orders',
+    createOrderRouter(useCases, {
+      authenticator: dependencies.callerAuthenticator,
+      telemetry: dependencies.authorizationTelemetry,
+    }),
+  );
   app.use(routeNotFound);
   app.use(errorBoundary);
 

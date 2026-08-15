@@ -1,5 +1,5 @@
 import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
-import { GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { jest } from '@jest/globals';
 import { DynamoDBOrderRepository } from '../../src/index.js';
@@ -141,27 +141,27 @@ describe('DynamoDBOrderRepository', () => {
     await expect(repository.findById(ORDER_ID)).rejects.toBe(failure);
   });
 
-  test('list returns an empty result', async () => {
+  test('listAll returns an empty result', async () => {
     send.mockResolvedValue({ Items: [] });
 
-    await expect(repository.list()).resolves.toEqual([]);
+    await expect(repository.listAll()).resolves.toEqual([]);
   });
 
-  test('list returns a validated single-page result', async () => {
+  test('listAll returns a validated single-page result', async () => {
     send.mockResolvedValue({ Items: [orderFixture()] });
 
-    await expect(repository.list()).resolves.toEqual([orderFixture()]);
+    await expect(repository.listAll()).resolves.toEqual([orderFixture()]);
     expect(send.mock.calls[0]![0]).toBeInstanceOf(ScanCommand);
   });
 
-  test('list returns multiple orders', async () => {
+  test('listAll returns multiple orders', async () => {
     const orders = [orderFixture(), orderFixture({ orderId: SECOND_ORDER_ID })];
     send.mockResolvedValue({ Items: orders });
 
-    await expect(repository.list()).resolves.toEqual(orders);
+    await expect(repository.listAll()).resolves.toEqual(orders);
   });
 
-  test('list collects all DynamoDB pages', async () => {
+  test('listAll collects all DynamoDB pages', async () => {
     send
       .mockResolvedValueOnce({
         Items: [orderFixture()],
@@ -171,48 +171,86 @@ describe('DynamoDBOrderRepository', () => {
         Items: [orderFixture({ orderId: SECOND_ORDER_ID })],
       });
 
-    await expect(repository.list()).resolves.toEqual([
+    await expect(repository.listAll()).resolves.toEqual([
       orderFixture(),
       orderFixture({ orderId: SECOND_ORDER_ID }),
     ]);
     expect(send).toHaveBeenCalledTimes(2);
   });
 
-  test('list passes the previous LastEvaluatedKey as ExclusiveStartKey', async () => {
+  test('listAll passes the previous LastEvaluatedKey as ExclusiveStartKey', async () => {
     const lastEvaluatedKey = { orderId: ORDER_ID };
     send
       .mockResolvedValueOnce({ Items: [], LastEvaluatedKey: lastEvaluatedKey })
       .mockResolvedValueOnce({ Items: [] });
 
-    await repository.list();
+    await repository.listAll();
 
     const secondCommand = send.mock.calls[1]![0] as ScanCommand;
     expect(secondCommand.input.ExclusiveStartKey).toEqual(lastEvaluatedKey);
   });
 
-  test('list rejects a corrupted stored order', async () => {
+  test('listAll rejects a corrupted stored order', async () => {
     send.mockResolvedValue({
       Items: [{ ...orderFixture(), items: [{ ...orderFixture().items[0], quantity: 0 }] }],
     });
 
-    await expect(repository.list()).rejects.toThrow();
+    await expect(repository.listAll()).rejects.toThrow();
   });
 
-  test('list returns nested values isolated from stored item references', async () => {
+  test('listAll returns nested values isolated from stored item references', async () => {
     const storedOrder = orderFixture();
     send.mockResolvedValue({ Items: [storedOrder] });
 
-    const firstList = await repository.list();
+    const firstList = await repository.listAll();
     firstList[0]!.items[0]!.quantity = 999;
 
-    await expect(repository.list()).resolves.toEqual([orderFixture()]);
+    await expect(repository.listAll()).resolves.toEqual([orderFixture()]);
     expect(storedOrder.items[0]!.quantity).toBe(2);
   });
 
-  test('list propagates unexpected AWS errors unchanged', async () => {
+  test('listAll propagates unexpected AWS errors unchanged', async () => {
     const failure = new Error('DynamoDB unavailable');
     send.mockRejectedValue(failure);
 
-    await expect(repository.list()).rejects.toBe(failure);
+    await expect(repository.listAll()).rejects.toBe(failure);
+  });
+
+  test('listByCustomerId queries the exact customer GSI without a FilterExpression', async () => {
+    send.mockResolvedValue({ Items: [orderFixture()] });
+
+    await expect(repository.listByCustomerId(orderFixture().customerId)).resolves.toEqual([
+      orderFixture(),
+    ]);
+
+    const command = send.mock.calls[0]![0] as QueryCommand;
+    expect(command).toBeInstanceOf(QueryCommand);
+    expect(command.input).toEqual({
+      TableName: TABLE_NAME,
+      IndexName: 'customerId-createdAt-index',
+      KeyConditionExpression: '#customerId = :customerId',
+      ExpressionAttributeNames: { '#customerId': 'customerId' },
+      ExpressionAttributeValues: { ':customerId': orderFixture().customerId },
+    });
+    expect(command.input.FilterExpression).toBeUndefined();
+  });
+
+  test('listByCustomerId collects every Query page with its LastEvaluatedKey', async () => {
+    const lastEvaluatedKey = {
+      customerId: orderFixture().customerId,
+      createdAt: orderFixture().createdAt,
+      orderId: ORDER_ID,
+    };
+    send
+      .mockResolvedValueOnce({ Items: [orderFixture()], LastEvaluatedKey: lastEvaluatedKey })
+      .mockResolvedValueOnce({ Items: [orderFixture({ orderId: SECOND_ORDER_ID })] });
+
+    await expect(repository.listByCustomerId(orderFixture().customerId)).resolves.toEqual([
+      orderFixture(),
+      orderFixture({ orderId: SECOND_ORDER_ID }),
+    ]);
+    expect(send).toHaveBeenCalledTimes(2);
+    const secondCommand = send.mock.calls[1]![0] as QueryCommand;
+    expect(secondCommand.input.ExclusiveStartKey).toEqual(lastEvaluatedKey);
   });
 });

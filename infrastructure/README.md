@@ -237,6 +237,66 @@ transition.
 Safe outputs expose the workflow queue name and URL, DLQ name, Lambda name, and routing-rule name.
 The Task 015 infrastructure definition has not been deployed.
 
+## OrderRegistryStack
+
+Task024 defines one private `smartretailx-order-service-dev` ECR repository in a separately
+deployable stack. Tags are immutable, basic scanning runs on push, untagged images expire after
+seven days, and only the ten most recent images are retained. The repository uses ECR's standard
+AES-256 server-side encryption and a development `DESTROY` removal policy, but is not force-emptied
+by a custom resource. Outputs expose only its name and URI.
+
+The service stack accepts an explicit immutable image tag through CDK context as
+`-c orderImageTag=<source-version>`. Local synth defaults to `task024-local-placeholder` and emits
+a validation warning; that placeholder and `latest` must never pass a deployment gate.
+
+## OrderServiceStack
+
+Task024 synthesizes the secure Order HTTP path without changing ownership of the existing Orders
+table or Saga resources. Task025 locally adds one customer access GSI to the existing
+OrderEvents-owned GlobalTable and application authorization configuration; none is deployed:
+
+```text
+Order HTTP API + Cognito JWT authorizer
+  -> VPC Link
+  -> internal ALB
+  -> Fargate task on port 3000
+  -> imported smartretailx-orders-dev table
+     -> customer Query on customerId-createdAt-index
+     -> admin Scan on the base table
+```
+
+The stack creates one `10.24.0.0/16` VPC with two public subnets and no NAT Gateway. The development
+task receives a public IP for outbound ECR, DynamoDB and CloudWatch connectivity, but task ingress
+is allowed only from the ALB security group. The internal ALB accepts only VPC Link security-group
+traffic. It uses an IP target group and `/health` checks; `/health` is not an API Gateway route.
+
+The Fargate task uses 256 CPU units, 512 MiB, desired count one, deployment rollback, and CPU target
+tracking between one and two tasks. It runs the production DynamoDB composition as non-root `node`
+with a read-only root filesystem, dropped capabilities, an init process and no ECS Exec. The task
+role has only `GetItem`, `PutItem`, and `Scan` against the existing Orders table, plus `Query` on
+the exact `customerId-createdAt-index` ARN. A separate
+execution role has repository pull and log-write permissions. The service has no direct
+EventBridge permission; the existing DynamoDB Stream relay remains the lifecycle publisher.
+
+All three existing application routes require the reused Cognito issuer/audience and `openid`
+scope. The private integration overwrites the backend path with stage-free `$request.path`.
+Development CORS permits only `http://localhost:5173`, and seven-day structured API/container logs
+exclude secrets and payloads. Safe outputs expose identifiers and endpoints only.
+
+The task receives only the existing public Cognito issuer and SPA client ID for independent access
+token verification. It accepts exactly one `customer` or `admin` group. The public create body
+excludes `customerId`; customers create with a deterministic UUID v5 identity, Query only their GSI
+partition, and get only owned Orders. Admins list/read all but cannot create. Ownership mismatch is
+the same `404` as absence. The API does not trust forwarded identity headers, and authorization
+telemetry excludes tokens, subjects, claims and request bodies.
+
+The OrderEvents GlobalTable still uses `orderId` as its primary key, `PAY_PER_REQUEST`, one current
+region replica, `NEW_AND_OLD_IMAGES` and the existing lifecycle relay. The one GSI uses string
+`customerId`/`createdAt` keys with `ALL` projection. It must be deployed separately in a future gate
+and verified `ACTIVE` with `DescribeTable` before OrderService deployment; CloudFormation
+`UPDATE_COMPLETE` alone is insufficient. Both Task024 stacks, the Task025 GSI and the image remain
+undeployed/unpushed.
+
 ## Review commands
 
 From the repository root, synthesize without deploying:

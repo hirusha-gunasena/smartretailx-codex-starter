@@ -1,7 +1,18 @@
 export { createOrderRouter } from './adapters/http/order-controller.js';
-export type { OrderUseCases } from './adapters/http/order-controller.js';
+export type { OrderHttpSecurity, OrderUseCases } from './adapters/http/order-controller.js';
+export {
+  CognitoOrderCallerAuthenticator,
+  createAwsCognitoOrderCallerAuthenticator,
+} from './adapters/auth/cognito-order-caller-authenticator.js';
+export type {
+  AwsCognitoOrderAuthenticatorConfiguration,
+  CognitoAccessTokenVerifier,
+} from './adapters/auth/cognito-order-caller-authenticator.js';
 export { createDynamoDBDocumentClient } from './adapters/dynamodb/dynamodb-client.js';
-export { DynamoDBOrderRepository } from './adapters/dynamodb/dynamodb-order-repository.js';
+export {
+  CUSTOMER_ORDERS_INDEX_NAME,
+  DynamoDBOrderRepository,
+} from './adapters/dynamodb/dynamodb-order-repository.js';
 export { DynamoDBOrderWorkflowRepository } from './adapters/dynamodb/dynamodb-order-workflow-repository.js';
 export {
   OrderLifecycleTransitionError,
@@ -47,6 +58,7 @@ export type {
   OrderWorkflowSqsHandler,
 } from './adapters/events/order-workflow-sqs-handler.js';
 export { InMemoryOrderRepository } from './adapters/persistence/in-memory-order-repository.js';
+export { ConsoleOrderAuthorizationTelemetry } from './adapters/telemetry/console-order-authorization-telemetry.js';
 
 export { CreateOrder } from './application/create-order.js';
 export { GetOrder } from './application/get-order.js';
@@ -56,6 +68,16 @@ export type { InventoryOutcomeEvent } from './application/process-inventory-outc
 export type { Clock } from './application/ports/clock.js';
 export type { EventPublisher } from './application/ports/event-publisher.js';
 export type { IdGenerator } from './application/ports/id-generator.js';
+export type {
+  OrderAuthorizationReasonCode,
+  OrderAuthorizationTelemetry,
+  OrderAuthorizationTelemetryEntry,
+} from './application/ports/order-authorization-telemetry.js';
+export type {
+  OrderCallerAuthenticator,
+  OrderRole,
+  VerifiedOrderCaller,
+} from './application/ports/order-caller-authenticator.js';
 export type { OrderRepository } from './application/ports/order-repository.js';
 export { ORDER_WORKFLOW_TRANSITION_RESULT } from './application/ports/order-workflow-repository.js';
 export type {
@@ -75,6 +97,12 @@ export type {
   ProductionOrderServiceConfiguration,
 } from './composition/configuration.js';
 export { createProductionApp } from './composition/production-composition.js';
+export { createGracefulShutdownHandler, startOrderHttpServer } from './composition/http-server.js';
+export type {
+  OrderServerLogEntry,
+  OrderServerLogSink,
+  ShutdownSignal,
+} from './composition/http-server.js';
 export {
   createOrderWorkflowHandler,
   createOrderWorkflowHandlerFromEnvironment,
@@ -89,6 +117,15 @@ export {
 } from './composition/system-dependencies.js';
 
 export {
+  OrderAuthenticationError,
+  OrderAuthorizationError,
+  OrderOwnershipMismatchError,
+} from './domain/authorization-errors.js';
+export type {
+  OrderAuthenticationReasonCode,
+  OrderAuthorizationReasonCode as OrderAuthorizationErrorReasonCode,
+} from './domain/authorization-errors.js';
+export {
   OrderConflictError,
   OrderNotFoundError,
   OrderServiceError,
@@ -97,6 +134,11 @@ export {
   OrderWorkflowValidationError,
 } from './domain/errors.js';
 export type { OrderValidationIssue } from './domain/errors.js';
+export {
+  CUSTOMER_UUID_NAMESPACE,
+  customerIdForCognitoSubject,
+} from './domain/customer-identity.js';
+export { UUID_V5_DNS_NAMESPACE, UUID_V5_URL_NAMESPACE, createUuidV5 } from './domain/uuid-v5.js';
 export { calculateOrderTotal } from './domain/money.js';
 export { OrderEntity, copyOrder } from './domain/order.js';
 export { ORDER_STATUS } from './domain/order-status.js';

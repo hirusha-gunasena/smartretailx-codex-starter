@@ -70,3 +70,71 @@ documentation/source control, expose tokens or capture raw authorization headers
 The User Pool ID, public client ID, Cognito domain, issuer and callback URL are integration values,
 not credentials. Even so, keep captured deployment evidence free of access tokens, authorization
 codes, PKCE verifiers, passwords and raw API authorization headers.
+
+## Future controlled Task024 Order deployment sequence
+
+Task024 is implemented and reviewed locally only. The commands below describe a future controlled
+gate; do not run them without fresh identity, region, health, cost, diff and explicit mutation
+approval. Replace angle-bracket values deliberately—never use the synth-only placeholder or
+`latest`.
+
+1. Re-run the complete quality gate and template-only regression diffs for all stacks. The
+   `OrderEvents` diff must contain only the one `customerId-createdAt-index` GSI and strictly
+   necessary attribute definitions; it must not replace the GlobalTable or alter its primary key,
+   billing, stream, removal, replica or relay resources.
+2. Obtain explicit approval for the GSI mutation, then deploy only
+   `SmartRetailX-dev-OrderEvents`:
+
+   ```powershell
+   npx cdk deploy SmartRetailX-dev-OrderEvents --exclusively --profile smartretailx-deploy
+   ```
+
+3. Wait for the CloudFormation stack to reach a stable successful state, then poll DynamoDB
+   `DescribeTable` until the exact index is active:
+
+   ```powershell
+   aws dynamodb describe-table --table-name smartretailx-orders-dev --query "Table.GlobalSecondaryIndexes[?IndexName=='customerId-createdAt-index'].IndexStatus" --region ap-south-1 --profile smartretailx-deploy
+   ```
+
+   Do not continue merely because CloudFormation reports `UPDATE_COMPLETE`; the GSI must report
+   `ACTIVE`. Stop on a failed stack, missing index, unexpected table change or non-active index.
+
+4. Re-run the controlled Saga success/rejection/idempotency verification appropriate to the gate,
+   confirm the six existing application stacks remain healthy, and obtain separate approval before
+   proceeding to container infrastructure.
+5. Review and explicitly approve deployment of only `SmartRetailX-dev-OrderRegistry`:
+
+   ```powershell
+   npx cdk deploy SmartRetailX-dev-OrderRegistry --profile smartretailx-deploy
+   ```
+
+6. Verify the private repository, immutable tags, scan-on-push and lifecycle configuration.
+7. Build and tag the exact source revision from the repository root:
+
+   ```powershell
+   $orderImageTag = git rev-parse HEAD
+   docker build --pull --file services/order-service/Dockerfile --tag "smartretailx-order-service:$orderImageTag" .
+   $registryHost = "<account-id>.dkr.ecr.ap-south-1.amazonaws.com"
+   aws ecr get-login-password --region ap-south-1 --profile smartretailx-deploy | docker login --username AWS --password-stdin $registryHost
+   docker tag "smartretailx-order-service:$orderImageTag" "$registryHost/smartretailx-order-service-dev:$orderImageTag"
+   docker push "$registryHost/smartretailx-order-service-dev:$orderImageTag"
+   ```
+
+8. Verify that exact immutable tag exists and review its image scan status/findings under the
+   project policy.
+9. Supply that full Git SHA through CDK context as `orderImageTag`, re-run synthesis, and review a
+   stack-scoped template-only diff for `SmartRetailX-dev-OrderService`.
+10. Obtain separate explicit approval before deploying only the service stack:
+
+```powershell
+npx cdk deploy SmartRetailX-dev-OrderService --context "orderImageTag=$orderImageTag" --profile smartretailx-deploy
+```
+
+11. Verify ECS stabilization, internal ALB target health, API Gateway/JWT configuration, logs, all
+    eight stack states and zero regression diffs before any separately approved HTTP mutation test.
+
+Do not deploy `OrderService` when the image tag is absent, `latest`, the placeholder, missing from
+ECR, or fails the approved scan policy; when Auth or the Orders table is unhealthy; when an existing
+Saga stack has a material diff; when the ALB is internet-facing; when an application route is
+unauthenticated; or before the customer index reports `ACTIVE`. Never combine the GSI, registry,
+image push and OrderService rollout into one approval or mutation step.

@@ -11,6 +11,8 @@ infrastructure separately in CDK; none of it has been deployed.
 - `application` contains create, get, list, and inventory-outcome processing use cases plus their
   storage, clock, ID, and event publishing ports.
 - `adapters/http` exposes the Express API and maps results and failures to shared response envelopes.
+- `adapters/auth` verifies Cognito access tokens and reduces verified claims to an opaque subject
+  and exact `customer`/`admin` role.
 - `adapters/persistence` supplies an in-memory repository for local development and tests.
 - `adapters/dynamodb` supplies the production persistence adapter and AWS SDK document-client
   factory without exposing SDK types to the domain or application layers.
@@ -27,20 +29,21 @@ document client for reuse across an SQS batch and warm Lambda invocations.
 
 ## Routes
 
-| Method | Route                     | Result                     |
-| ------ | ------------------------- | -------------------------- |
-| GET    | `/health`                 | Lightweight process health |
-| POST   | `/api/v1/orders`          | Create a `PENDING` order   |
-| GET    | `/api/v1/orders`          | List stored orders         |
-| GET    | `/api/v1/orders/:orderId` | Retrieve one order         |
+| Method | Route                     | Result                                                           |
+| ------ | ------------------------- | ---------------------------------------------------------------- |
+| GET    | `/health`                 | Lightweight process health                                       |
+| POST   | `/api/v1/orders`          | Customer creates a `PENDING` order with server-derived ownership |
+| GET    | `/api/v1/orders`          | Customer lists own Orders; admin lists all                       |
+| GET    | `/api/v1/orders/:orderId` | Customer reads own Order; admin reads any existing Order         |
 
-Malformed or invalid requests return `400`, unknown valid order IDs return `404`, and unexpected
-failures return a generic `500` without internal details. An invalid order ID path value returns
-`400`. CORS is not enabled in this service. The health endpoint remains a lightweight process check
-and does not call DynamoDB.
+Missing/invalid access tokens return `401`; unsupported, ambiguous or insufficient roles return
+`403`; malformed requests return `400`; and unknown valid order IDs return `404`. A customer asking
+for another customer's Order gets the same `404` envelope as an absent Order. Unexpected failures
+return a generic `500` without internal details. CORS is not enabled inside the service. `/health`
+is unauthenticated inside the container, does not call DynamoDB, and is not routed by API Gateway.
 
-The public list contract has no pagination. The DynamoDB adapter therefore follows every scan page
-and returns the collected result.
+The public list contract has no pagination. The DynamoDB adapter therefore follows every Query page
+for customer lists and every Scan page for admin lists before returning the collected result.
 
 ## Domain rules
 
@@ -48,7 +51,11 @@ and returns the collected result.
 - Quantities are positive integers and unit prices are non-negative finite numbers.
 - Clients provide one uppercase, three-letter order currency that applies consistently to all lines.
 - The service generates the order ID, calculates the total, sets `PENDING`, and owns timestamps.
-- Client-supplied IDs, statuses, totals, and timestamps are rejected.
+- The strict public create body accepts only `items` and `currency`. Client-supplied `customerId`,
+  IDs, statuses, totals, and timestamps are rejected.
+- A customer's opaque Cognito subject is translated into a stable domain UUID using the pinned
+  namespaced UUID v5 mapping `UUIDv5("cognito:" + subject, UUIDv5("customers.smartretailx.internal",
+DNS))`. The raw subject is neither persisted as `customerId` nor logged.
 - `PENDING` orders contain no terminal outcome metadata; `CONFIRMED` requires a UUID
   `reservationId`, while `REJECTED` requires a non-empty `rejectionReason`.
 - Repository boundaries deep-copy orders and nested items.
@@ -60,16 +67,21 @@ range. A future money contract should use fixed minor units or an explicit decim
 
 ## Configuration
 
-| Variable               | Local default | Description                                    |
-| ---------------------- | ------------- | ---------------------------------------------- |
-| `PORT`                 | `3000`        | Listening port from 1 through 65535            |
-| `ORDERS_TABLE_NAME`    | Not used      | Required by production HTTP and workflow paths |
-| `ORDER_EVENT_BUS_NAME` | Not used      | Required only by the production event relay    |
+| Variable                      | Local default | Description                                      |
+| ----------------------------- | ------------- | ------------------------------------------------ |
+| `PORT`                        | `3000`        | Listening port from 1 through 65535              |
+| `ORDERS_TABLE_NAME`           | Not used      | Required by production HTTP and workflow paths   |
+| `COGNITO_USER_POOL_ISSUER`    | None          | Existing canonical Cognito issuer; public config |
+| `COGNITO_USER_POOL_CLIENT_ID` | None          | Existing public SPA client ID                    |
+| `ORDER_EVENT_BUS_NAME`        | Not used      | Required only by the production event relay      |
 
 Both servers bind to `0.0.0.0` so they are reachable inside a container. AWS region and credentials
 are not hardcoded; the AWS SDK uses its standard runtime configuration chain. Production
-composition fails before listening when `ORDERS_TABLE_NAME` is missing or empty. Event-relay
-composition independently fails when `ORDER_EVENT_BUS_NAME` is missing or empty.
+composition fails before listening when its table or Cognito verifier configuration is invalid.
+The User Pool ID is derived from and checked against the canonical trusted issuer, avoiding a new
+Auth-stack value. JWT verification uses public Cognito JWKS and requires no Cognito Admin API call
+or static AWS credential. Event-relay composition independently fails when
+`ORDER_EVENT_BUS_NAME` is missing or empty.
 
 ## Order workflow Saga consumer
 
@@ -152,9 +164,8 @@ npm --workspace @smartretailx/order-service run build
 npm --workspace @smartretailx/order-service start
 ```
 
-The `start` command is explicitly the in-memory development path and preserves the current Docker
-behavior. To use the production persistence composition after building, set `ORDERS_TABLE_NAME` in
-the runtime environment and run:
+The `start` command is explicitly the in-memory development path. To use the production persistence
+composition after building, set `ORDERS_TABLE_NAME` in the runtime environment and run:
 
 ```bash
 npm --workspace @smartretailx/order-service run start:production
@@ -240,20 +251,45 @@ Docker can copy all required workspaces:
 
 ```bash
 docker build -f services/order-service/Dockerfile -t smartretailx-order-service:dev .
-docker run --rm -p 3000:3000 smartretailx-order-service:dev
+docker run --rm --read-only --init --cap-drop ALL --user node \
+  -e ORDERS_TABLE_NAME=smartretailx-orders-dev \
+  -e COGNITO_USER_POOL_ISSUER=<existing-cognito-issuer> \
+  -e COGNITO_USER_POOL_CLIENT_ID=<existing-public-client-id> \
+  -p 3000:3000 smartretailx-order-service:dev
 ```
 
 Then request `http://localhost:3000/health`. The multi-stage image compiles TypeScript in the builder,
 installs production dependencies only in the runtime stage, runs as the non-root `node` user, and
-continues to use the explicit in-memory entry point.
+uses the production DynamoDB entry point. The example table name is configuration only: do not run
+write routes against a live table during a smoke test. The process handles `SIGTERM` and `SIGINT`,
+stops accepting new work, closes the HTTP server, and emits sanitized structured shutdown logs.
 
-## DynamoDB listing limitation
+The external API authorizer and the container both validate authentication. The backend sees the
+original bearer token through the HTTP proxy integration and independently verifies signature,
+issuer/User Pool, app client, expiry, access-token use and `openid` scope before exact group/RBAC
+and ownership checks. It does not trust `x-role`, `x-user-id`, `x-customer-id` or other caller
+identity headers.
 
-Using `ScanCommand` and collecting every page is acceptable for this coursework prototype and
-matches the current unpaginated API contract. It is not the preferred query strategy for a large
-orders table because cost and latency grow with table size. A future customer-order query will need
-a deliberately designed customer-based access pattern, likely a GSI, together with API pagination.
-Task 007 does not add that GSI.
+## DynamoDB list access patterns
+
+Customer listing uses `QueryCommand` against the exact `customerId-createdAt-index` partition and
+never uses Scan plus filtering as ownership control. The single GSI uses `customerId` as its string
+partition key, `createdAt` as its string sort key, and `ALL` projection so complete Orders can be
+returned without a read per item. Admin listing retains the existing full-table Scan. Both paths
+collect every page to preserve the current unpaginated response contract; a future scale-oriented
+contract should introduce an opaque, role-safe continuation token deliberately.
+
+Task025 defines but does not deploy the GSI. A future gate must update only OrderEvents, wait for a
+stable stack, and use `DescribeTable` until the index reports `ACTIVE` before deploying or starting
+the Order service against it. The existing Orders primary key, billing, `NEW_AND_OLD_IMAGES` stream,
+relay and Saga semantics are unchanged.
+
+The same application container can later run on EKS: its runtime inputs are a standard bearer
+token, public Cognito verifier configuration, DynamoDB configuration and normal AWS workload
+credentials. It does not use ECS metadata, ECS cluster/service identity, ECS Exec, instance
+identity or ALB authentication headers for end-user identity. A future EKS design would replace the
+workload-IAM wiring at the infrastructure layer; Task025 intentionally adds no Kubernetes
+manifests.
 
 The Task 009 CDK stack now defines the Orders table, stream, relay Lambda, failure destination, and
 custom EventBridge bus. Those definitions have not been deployed, and downstream Inventory routing

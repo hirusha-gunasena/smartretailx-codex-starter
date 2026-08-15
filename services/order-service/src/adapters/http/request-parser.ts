@@ -1,5 +1,5 @@
-import { createOrderRequestSchema, orderIdSchema } from '@smartretailx/api-contracts';
-import type { CreateOrderRequest } from '@smartretailx/api-contracts';
+import { createOrderBodySchema, orderIdSchema } from '@smartretailx/api-contracts';
+import type { CreateOrderBody } from '@smartretailx/api-contracts';
 
 export class HttpRequestError extends Error {
   public constructor(
@@ -12,8 +12,8 @@ export class HttpRequestError extends Error {
   }
 }
 
-export const parseCreateOrderRequest = (body: unknown): CreateOrderRequest => {
-  const result = createOrderRequestSchema.safeParse(body);
+export const parseCreateOrderRequest = (body: unknown): CreateOrderBody => {
+  const result = createOrderBodySchema.safeParse(body);
 
   if (!result.success) {
     throw new HttpRequestError('VALIDATION_ERROR', 'The order request is invalid.');

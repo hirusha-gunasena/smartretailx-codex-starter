@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import type { ApiErrorResponse, ApiSuccessResponse } from '@smartretailx/api-contracts';
 import type { ErrorRequestHandler, Request, RequestHandler, Response } from 'express';
 import {
+  OrderAuthenticationError,
+  OrderAuthorizationError,
+} from '../../domain/authorization-errors.js';
+import {
   OrderConflictError,
   OrderNotFoundError,
   OrderValidationError,
@@ -71,6 +75,16 @@ export const errorBoundary: ErrorRequestHandler = (error, request, response, nex
 
   if (error instanceof OrderValidationError) {
     sendError(request, response, 400, 'VALIDATION_ERROR', 'The order request is invalid.');
+    return;
+  }
+
+  if (error instanceof OrderAuthenticationError) {
+    sendError(request, response, 401, 'UNAUTHORIZED', 'Authentication is required.');
+    return;
+  }
+
+  if (error instanceof OrderAuthorizationError) {
+    sendError(request, response, 403, 'FORBIDDEN', 'The caller is not authorized.');
     return;
   }
 

@@ -18,6 +18,17 @@ describe('readOrderWorkflowConfiguration', () => {
   });
 
   test('does not require workflow configuration through unrelated HTTP configuration', () => {
-    expect(readConfiguration({ PORT: '3000' })).toEqual({ host: '0.0.0.0', port: 3000 });
+    expect(
+      readConfiguration({
+        PORT: '3000',
+        COGNITO_USER_POOL_ISSUER: 'https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_example',
+        COGNITO_USER_POOL_CLIENT_ID: 'public-client-id',
+      }),
+    ).toEqual({
+      host: '0.0.0.0',
+      port: 3000,
+      cognitoUserPoolId: 'ap-south-1_example',
+      cognitoUserPoolClientId: 'public-client-id',
+    });
   });
 });

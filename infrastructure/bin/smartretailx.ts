@@ -2,16 +2,22 @@
 import * as cdk from 'aws-cdk-lib';
 import { AuthStack } from '../lib/auth-stack.js';
 import { CatalogueStack } from '../lib/catalogue-stack.js';
-import { getWebAuthenticationConfiguration } from '../lib/environment-configuration.js';
+import {
+  getOrderImageConfiguration,
+  getWebAuthenticationConfiguration,
+} from '../lib/environment-configuration.js';
 import { FoundationStack } from '../lib/foundation-stack.js';
 import { InventoryStack } from '../lib/inventory-stack.js';
 import { OrderEventsStack } from '../lib/order-events-stack.js';
+import { OrderRegistryStack } from '../lib/order-registry-stack.js';
+import { OrderServiceStack } from '../lib/order-service-stack.js';
 import { OrderWorkflowStack } from '../lib/order-workflow-stack.js';
 
 const app = new cdk.App();
 const projectName = app.node.tryGetContext('projectName') ?? 'SmartRetailX';
 const environment = app.node.tryGetContext('environment') ?? 'dev';
 const webAuthentication = getWebAuthenticationConfiguration(environment);
+const orderImage = getOrderImageConfiguration(app.node.tryGetContext('orderImageTag'));
 
 new FoundationStack(app, `${projectName}-${environment}-Foundation`, {
   description: 'SmartRetailX foundational placeholder stack',
@@ -42,6 +48,27 @@ const orderEventsStack = new OrderEventsStack(app, `${projectName}-${environment
   description: 'SmartRetailX OrderCreated event relay infrastructure',
   projectName,
   environmentName: environment,
+});
+
+const orderRegistryStack = new OrderRegistryStack(
+  app,
+  `${projectName}-${environment}-OrderRegistry`,
+  {
+    description: 'SmartRetailX private Order service ECR registry',
+    projectName,
+    environmentName: environment,
+  },
+);
+
+new OrderServiceStack(app, `${projectName}-${environment}-OrderService`, {
+  description: 'SmartRetailX authenticated private Order ECS Fargate service',
+  projectName,
+  environmentName: environment,
+  imageTag: orderImage.imageTag,
+  repository: orderRegistryStack.repository,
+  userPoolIssuer: authStack.issuer,
+  userPoolClientId: authStack.userPoolClientId,
+  webApplicationUrl: webAuthentication.applicationUrl,
 });
 
 new InventoryStack(app, `${projectName}-${environment}-Inventory`, {

@@ -25,7 +25,13 @@ export class InMemoryOrderRepository implements OrderRepository {
     return order === undefined ? null : copyOrder(order);
   }
 
-  public async list(): Promise<readonly Order[]> {
+  public async listAll(): Promise<readonly Order[]> {
     return [...this.orders.values()].map(copyOrder);
+  }
+
+  public async listByCustomerId(customerId: string): Promise<readonly Order[]> {
+    return [...this.orders.values()]
+      .filter((order) => order.customerId === customerId)
+      .map(copyOrder);
   }
 }

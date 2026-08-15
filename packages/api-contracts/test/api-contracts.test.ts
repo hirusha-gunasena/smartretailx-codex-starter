@@ -1,5 +1,6 @@
 import {
   apiErrorResponseSchema,
+  createOrderBodySchema,
   createOrderRequestSchema,
   createApiSuccessResponseSchema,
   createProductRequestSchema,
@@ -69,6 +70,13 @@ describe('order API contracts', () => {
 
   test('accepts a valid create-order request', () => {
     expect(createOrderRequestSchema.safeParse(createRequest).success).toBe(true);
+  });
+
+  test('accepts only client-controlled fields in the public create-order body', () => {
+    const publicBody = { items: createRequest.items, currency: createRequest.currency };
+
+    expect(createOrderBodySchema.safeParse(publicBody).success).toBe(true);
+    expect(createOrderBodySchema.safeParse({ ...publicBody, customerId }).success).toBe(false);
   });
 
   test('accepts a valid order response', () => {
