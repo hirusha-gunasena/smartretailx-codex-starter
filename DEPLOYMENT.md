@@ -73,6 +73,15 @@ codes, PKCE verifiers, passwords and raw API authorization headers.
 
 ## Future controlled Task024 Order deployment sequence
 
+The first published Order image (`6eacebe2fa18289a09a75e7124429ebe6fddf890`, digest
+`sha256:a2410b9a1b2781eb3b10bce7f29ea35e66f112a640b7b3e17b66c6ef158fcafd`) is blocked and retained
+as evidence because ECR basic scanning reported three CRITICAL and five HIGH findings inherited
+from Debian `perl-base`. Do not delete, overwrite, retag, suppress findings for, or deploy that
+artifact. Task027A changes the local runtime base to a digest-pinned official Node.js 22 Alpine 3.24
+image without compatibility packages. A later, separately approved publication task must clean-build
+from the new committed SHA, use that new full SHA as the only ECR tag, and require CRITICAL=0 and
+HIGH=0 from the existing ECR basic scan-on-push gate before Task028 can be considered.
+
 Task024 is implemented and reviewed locally only. The commands below describe a future controlled
 gate; do not run them without fresh identity, region, health, cost, diff and explicit mutation
 approval. Replace angle-bracket values deliberately—never use the synth-only placeholder or
@@ -109,7 +118,8 @@ approval. Replace angle-bracket values deliberately—never use the synth-only p
    ```
 
 6. Verify the private repository, immutable tags, scan-on-push and lifecycle configuration.
-7. Build and tag the exact source revision from the repository root:
+7. Build and tag the exact source revision from the repository root. This must be a new committed
+   SHA; never reuse the blocked SHA or retag a pre-commit local candidate:
 
    ```powershell
    $orderImageTag = git rev-parse HEAD

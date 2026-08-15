@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS builder
+FROM node:22-alpine3.24@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS builder
 
 WORKDIR /workspace
 
@@ -25,7 +25,7 @@ RUN npm --workspace @smartretailx/api-contracts run build \
     && npm --workspace @smartretailx/event-contracts run build \
     && npm --workspace @smartretailx/order-service run build
 
-FROM node:22-bookworm-slim AS runtime
+FROM node:22-alpine3.24@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS runtime
 
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -42,7 +42,9 @@ RUN npm ci --omit=dev \
     --workspace @smartretailx/event-contracts \
     --workspace @smartretailx/order-service \
     --include-workspace-root=false \
-    && npm cache clean --force
+    && npm cache clean --force \
+    && rm -rf /usr/local/lib/node_modules/npm /opt/yarn-v1.22.22 \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 COPY --from=builder /workspace/packages/api-contracts/dist ./packages/api-contracts/dist
 COPY --from=builder /workspace/packages/event-contracts/dist ./packages/event-contracts/dist

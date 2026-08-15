@@ -69,6 +69,17 @@
 - The private ECR repository uses immutable tags, rejects `latest` in deployment configuration,
   scans on push, expires untagged images after seven days, and retains at most ten images. A future
   gate must review scan results and verify the exact immutable image tag before deployment.
+- The first immutable Order image, built from Git SHA
+  `6eacebe2fa18289a09a75e7124429ebe6fddf890`, is intentionally retained as blocked security
+  evidence. ECR basic scanning found three CRITICAL and five HIGH findings in Debian's essential
+  `perl-base` package; the gate prevented its deployment without suppressing or reclassifying any
+  finding.
+- The remediated local Dockerfile pins both stages to the reviewed official Node.js 22 Alpine 3.24
+  image digest. The production dependency graph requires no native add-on, glibc compatibility
+  layer, shell, Perl, package manager, or build tool in the runtime stage. Unused npm and Yarn
+  tooling is removed after production dependencies are installed. Every replacement image must be
+  rebuilt from a new Git SHA and must still reach ECR scan results of CRITICAL=0 and HIGH=0 before
+  an OrderService deployment can be considered.
 - API access logs and application logs exclude authorization headers, tokens, request bodies and
   claims. The API log captures operational request metadata; the container emits structured JSON.
 - API and application JWT authentication are **IMPLEMENTED LOCALLY**. The backend independently
