@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
@@ -14,6 +15,9 @@ import type { Construct } from 'constructs';
 export interface CatalogueStackProps extends cdk.StackProps {
   readonly environmentName: string;
   readonly projectName: string;
+  readonly userPoolClientId: string;
+  readonly userPoolIssuer: string;
+  readonly webApplicationUrl: string;
 }
 
 const findRepositoryRoot = (startPath: string): string => {
@@ -123,7 +127,7 @@ export class CatalogueStack extends cdk.Stack {
       apiName: `${functionName}-http-api`,
       description: 'SmartRetailX Product Catalogue HTTP API',
       corsPreflight: {
-        allowOrigins: ['http://localhost:5173'],
+        allowOrigins: [props.webApplicationUrl],
         allowHeaders: ['Content-Type', 'Authorization'],
         allowMethods: [
           apigatewayv2.CorsHttpMethod.GET,
@@ -135,10 +139,21 @@ export class CatalogueStack extends cdk.Stack {
       },
     });
 
+    const catalogueAuthorizer = new HttpJwtAuthorizer(
+      'CatalogueJwtAuthorizer',
+      props.userPoolIssuer,
+      {
+        authorizerName: `${functionName}-jwt-authorizer`,
+        jwtAudience: [props.userPoolClientId],
+      },
+    );
+
     catalogueApi.addRoutes({
       path: '/api/v1/products',
       methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
       integration: catalogueIntegration,
+      authorizer: catalogueAuthorizer,
+      authorizationScopes: ['openid'],
     });
     catalogueApi.addRoutes({
       path: '/api/v1/products/{productId}',
@@ -148,6 +163,8 @@ export class CatalogueStack extends cdk.Stack {
         apigatewayv2.HttpMethod.DELETE,
       ],
       integration: catalogueIntegration,
+      authorizer: catalogueAuthorizer,
+      authorizationScopes: ['openid'],
     });
 
     new cdk.CfnOutput(this, 'CatalogueApiUrl', {

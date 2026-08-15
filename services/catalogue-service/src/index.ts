@@ -5,7 +5,17 @@ export type { ProductRepository } from './application/ports/product-repository.j
 export { createDynamoDbDocumentClient } from './adapters/dynamodb/dynamodb-client.js';
 export { DynamoDbProductRepository } from './adapters/dynamodb/dynamodb-product-repository.js';
 export { createCatalogueHandler } from './adapters/http/catalogue-handler.js';
-export type { CatalogueHandler, CatalogueUseCases } from './adapters/http/catalogue-handler.js';
+export type {
+  CatalogueApiEvent,
+  CatalogueHandler,
+  CatalogueUseCases,
+} from './adapters/http/catalogue-handler.js';
+export { authorizeCatalogueRequest, CATALOGUE_ROLES } from './adapters/http/authorization.js';
+export type {
+  CatalogueJwtClaims,
+  CatalogueRole,
+  JwtClaims,
+} from './adapters/http/authorization.js';
 
 export { CreateProduct } from './application/use-cases/create-product.js';
 export { DeleteProduct } from './application/use-cases/delete-product.js';
@@ -14,6 +24,7 @@ export { ListProducts } from './application/use-cases/list-products.js';
 export { UpdateProduct } from './application/use-cases/update-product.js';
 
 export {
+  CatalogueAuthorizationError,
   CatalogueError,
   ProductConflictError,
   ProductNotFoundError,

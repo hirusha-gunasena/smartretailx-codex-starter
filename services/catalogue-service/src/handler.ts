@@ -1,4 +1,5 @@
-import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+import type { APIGatewayProxyResultV2, Handler } from 'aws-lambda';
+import type { CatalogueApiEvent } from './adapters/http/catalogue-handler.js';
 import { createDynamoDbDocumentClient } from './adapters/dynamodb/dynamodb-client.js';
 import { DynamoDbProductRepository } from './adapters/dynamodb/dynamodb-product-repository.js';
 import { composeCatalogueHandler } from './composition/catalogue-composition.js';
@@ -13,4 +14,5 @@ const catalogueHandler = composeCatalogueHandler(
   new SystemClock(),
 );
 
-export const handler: APIGatewayProxyHandlerV2 = async (event) => catalogueHandler(event);
+export const handler: Handler<CatalogueApiEvent, APIGatewayProxyResultV2> = async (event) =>
+  catalogueHandler(event);

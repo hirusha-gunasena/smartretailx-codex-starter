@@ -30,3 +30,9 @@ export class ProductConflictError extends CatalogueError {
     super(`Product '${productId}' already exists`, 'PRODUCT_CONFLICT');
   }
 }
+
+export class CatalogueAuthorizationError extends CatalogueError {
+  public constructor() {
+    super('Catalogue access denied', 'CATALOGUE_ACCESS_DENIED');
+  }
+}

@@ -5,9 +5,9 @@ import type {
   Product,
 } from '@smartretailx/api-contracts';
 import { jest } from '@jest/globals';
-import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import { composeCatalogueHandler } from '../src/index.js';
-import type { CatalogueHandler } from '../src/index.js';
+import type { CatalogueApiEvent, CatalogueHandler, JwtClaims } from '../src/index.js';
 import {
   AdjustableClock,
   FixedIdGenerator,
@@ -19,6 +19,18 @@ import {
 import { InMemoryProductRepository } from './support/in-memory-product-repository.js';
 
 const REQUEST_ID = 'api-request-123';
+const ADMIN_CLAIMS: JwtClaims = {
+  sub: 'admin-user-123',
+  token_use: 'access',
+  scope: 'openid email profile',
+  'cognito:groups': ['admin'],
+};
+const CUSTOMER_CLAIMS: JwtClaims = {
+  sub: 'customer-user-123',
+  token_use: 'access',
+  scope: 'openid email profile',
+  'cognito:groups': ['customer'],
+};
 
 const createEvent = (
   method: string,
@@ -27,8 +39,9 @@ const createEvent = (
     readonly body?: string;
     readonly productId?: string;
     readonly requestId?: string;
+    readonly claims?: JwtClaims | null;
   } = {},
-): APIGatewayProxyEventV2 => ({
+): CatalogueApiEvent => ({
   version: '2.0',
   routeKey: `${method} ${rawPath}`,
   rawPath,
@@ -51,6 +64,15 @@ const createEvent = (
     stage: '$default',
     time: '08/Aug/2026:10:30:00 +0000',
     timeEpoch: 1_786_184_200_000,
+    ...(options.claims === null
+      ? {}
+      : {
+          authorizer: {
+            jwt: {
+              claims: options.claims ?? ADMIN_CLAIMS,
+            },
+          },
+        }),
   },
   isBase64Encoded: false,
   ...(options.body === undefined ? {} : { body: options.body }),
@@ -69,7 +91,9 @@ describe('catalogue HTTP API handler', () => {
   test('GET /api/v1/products returns the product list', async () => {
     const handler = createHandler(new InMemoryProductRepository([productFixture()]));
 
-    const response = await handler(createEvent('GET', '/api/v1/products'));
+    const response = await handler(
+      createEvent('GET', '/api/v1/products', { claims: CUSTOMER_CLAIMS }),
+    );
 
     expect(response.statusCode).toBe(200);
     expect(parseBody<ApiSuccessResponse<readonly Product[]>>(response).data).toEqual([
@@ -81,7 +105,10 @@ describe('catalogue HTTP API handler', () => {
     const handler = createHandler(new InMemoryProductRepository([productFixture()]));
 
     const response = await handler(
-      createEvent('GET', `/api/v1/products/${PRODUCT_ID}`, { productId: PRODUCT_ID }),
+      createEvent('GET', `/api/v1/products/${PRODUCT_ID}`, {
+        productId: PRODUCT_ID,
+        claims: CUSTOMER_CLAIMS,
+      }),
     );
 
     expect(response.statusCode).toBe(200);
@@ -230,6 +257,102 @@ describe('catalogue HTTP API handler', () => {
     );
 
     expect(response).not.toHaveProperty('body');
+  });
+
+  test.each([
+    ['POST', '/api/v1/products', { body: JSON.stringify(createProductRequest()) }],
+    [
+      'PATCH',
+      `/api/v1/products/${PRODUCT_ID}`,
+      { body: JSON.stringify({ price: 69.99 }), productId: PRODUCT_ID },
+    ],
+    ['DELETE', `/api/v1/products/${PRODUCT_ID}`, { productId: PRODUCT_ID }],
+  ] as const)('rejects customer %s writes with 403', async (method, rawPath, options) => {
+    const response = await createHandler(new InMemoryProductRepository([productFixture()]))(
+      createEvent(method, rawPath, { ...options, claims: CUSTOMER_CLAIMS }),
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(parseBody<ApiErrorResponse>(response).error).toEqual({
+      code: 'FORBIDDEN',
+      message: 'Access denied.',
+    });
+  });
+
+  test('denies customer writes before calling repository mutations', async () => {
+    const repository = new InMemoryProductRepository([productFixture()]);
+    const createSpy = jest.spyOn(repository, 'create');
+    const updateSpy = jest.spyOn(repository, 'update');
+    const deleteSpy = jest.spyOn(repository, 'delete');
+    const handler = createHandler(repository);
+
+    const responses = await Promise.all([
+      handler(
+        createEvent('POST', '/api/v1/products', {
+          body: JSON.stringify(createProductRequest()),
+          claims: CUSTOMER_CLAIMS,
+        }),
+      ),
+      handler(
+        createEvent('PATCH', `/api/v1/products/${PRODUCT_ID}`, {
+          body: JSON.stringify({ price: 69.99 }),
+          productId: PRODUCT_ID,
+          claims: CUSTOMER_CLAIMS,
+        }),
+      ),
+      handler(
+        createEvent('DELETE', `/api/v1/products/${PRODUCT_ID}`, {
+          productId: PRODUCT_ID,
+          claims: CUSTOMER_CLAIMS,
+        }),
+      ),
+    ]);
+
+    expect(responses.map((response) => response.statusCode)).toEqual([403, 403, 403]);
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(deleteSpy).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['GET', '/api/v1/products', {}],
+    ['GET', `/api/v1/products/${PRODUCT_ID}`, { productId: PRODUCT_ID }],
+  ] as const)(
+    'rejects %s %s when no recognized group is present',
+    async (method, rawPath, options) => {
+      const response = await createHandler(new InMemoryProductRepository([productFixture()]))(
+        createEvent(method, rawPath, {
+          ...options,
+          claims: { ...CUSTOMER_CLAIMS, 'cognito:groups': ['support'] },
+        }),
+      );
+
+      expect(response.statusCode).toBe(403);
+      expect(parseBody<ApiErrorResponse>(response).error.code).toBe('FORBIDDEN');
+    },
+  );
+
+  test('denies access before calling a repository operation', async () => {
+    const repository = new InMemoryProductRepository([productFixture()]);
+    const listSpy = jest.spyOn(repository, 'list');
+
+    const response = await createHandler(repository)(
+      createEvent('GET', '/api/v1/products', { claims: null }),
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(listSpy).not.toHaveBeenCalled();
+  });
+
+  test('rejects malformed group claims with 403', async () => {
+    const response = await createHandler()(
+      createEvent('GET', '/api/v1/products', {
+        claims: { ...CUSTOMER_CLAIMS, 'cognito:groups': 'customer' },
+      }),
+    );
+
+    expect(response.statusCode).toBe(403);
+    expect(parseBody<ApiErrorResponse>(response).error.code).toBe('FORBIDDEN');
   });
 
   test('rejects an invalid productId path parameter with 400', async () => {

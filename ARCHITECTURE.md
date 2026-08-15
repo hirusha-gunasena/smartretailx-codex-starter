@@ -185,6 +185,30 @@ for transition detection. It preserves one Orders table, one unified relay Lambd
 mapping, the existing EventBridge bus, scoped IAM, bounded retries, failure destination, and
 `ReportBatchItemFailures`. No Task 016 or Task 017 infrastructure has been deployed.
 
+## Task018 identity and Catalogue authorization
+
+Task018 adds a dedicated `SmartRetailX-dev-Auth` stack. It owns one email-based Cognito User Pool,
+the `customer` and `admin` application groups, one public SPA client and one Cognito-owned domain.
+The public client uses Authorization Code Grant with PKCE and does not have a client secret. Its
+issuer and client ID are passed to `CatalogueStack` as CDK cross-stack references; account IDs,
+regions and ARNs are not hardcoded.
+
+```text
+Browser -> Cognito hosted authorization endpoint -> authorization code + PKCE
+Browser -> Cognito token endpoint -> access token
+Browser -> Catalogue HTTP API -> Cognito JWT authorizer -> Catalogue Lambda RBAC -> use case
+```
+
+All five `/api/v1/products` routes share one HTTP API JWT authorizer. API Gateway verifies the
+Cognito issuer, app-client audience and `openid` route scope. Lambda trusts only the resulting
+authorizer claim context and performs the application-role decision before product parsing or data
+access: `customer` and `admin` can use GET routes, while only `admin` can use POST, PATCH and DELETE.
+This deliberately separates token verification from business authorization and avoids adding a JWT
+library or JWKS fetch path to the Lambda.
+
+Task018 is implemented and synth-tested locally. It has not been deployed and has not created a User
+Pool, client, domain, group or user in AWS.
+
 ## Data ownership
 
 | Service          | Primary store                        | Ownership                  |
@@ -214,9 +238,11 @@ mapping, the existing EventBridge bus, scoped IAM, bounded retries, failure dest
 
 ## Security
 
-- Cognito User Pool and app client.
-- API Gateway JWT authorizer.
-- Cognito groups: `Customers`, `InventoryManagers`, `Administrators`.
+- Dedicated Cognito User Pool and public authorization-code/PKCE app client.
+- API Gateway JWT authorizer on every Catalogue route.
+- Cognito application groups: `customer` (Catalogue read) and `admin` (Catalogue read/write), with
+  no IAM roles attached.
+- Fail-closed Lambda authorization using only API Gateway-validated access-token claims.
 - IAM roles for Lambda and ECS tasks.
 - KMS encryption and Secrets Manager for non-public secrets.
 - CloudFront/WAF and ACM TLS for public endpoints.

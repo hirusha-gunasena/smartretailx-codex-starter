@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
+import { AuthStack } from '../lib/auth-stack.js';
 import { CatalogueStack } from '../lib/catalogue-stack.js';
+import { getWebAuthenticationConfiguration } from '../lib/environment-configuration.js';
 import { FoundationStack } from '../lib/foundation-stack.js';
 import { InventoryStack } from '../lib/inventory-stack.js';
 import { OrderEventsStack } from '../lib/order-events-stack.js';
@@ -9,6 +11,7 @@ import { OrderWorkflowStack } from '../lib/order-workflow-stack.js';
 const app = new cdk.App();
 const projectName = app.node.tryGetContext('projectName') ?? 'SmartRetailX';
 const environment = app.node.tryGetContext('environment') ?? 'dev';
+const webAuthentication = getWebAuthenticationConfiguration(environment);
 
 new FoundationStack(app, `${projectName}-${environment}-Foundation`, {
   description: 'SmartRetailX foundational placeholder stack',
@@ -19,10 +22,20 @@ new FoundationStack(app, `${projectName}-${environment}-Foundation`, {
   },
 });
 
+const authStack = new AuthStack(app, `${projectName}-${environment}-Auth`, {
+  description: 'SmartRetailX Cognito authentication and authorization foundation',
+  projectName,
+  environmentName: environment,
+  webAuthentication,
+});
+
 new CatalogueStack(app, `${projectName}-${environment}-Catalogue`, {
   description: 'SmartRetailX Product Catalogue infrastructure',
   projectName,
   environmentName: environment,
+  userPoolIssuer: authStack.issuer,
+  userPoolClientId: authStack.userPoolClientId,
+  webApplicationUrl: webAuthentication.applicationUrl,
 });
 
 const orderEventsStack = new OrderEventsStack(app, `${projectName}-${environment}-OrderEvents`, {

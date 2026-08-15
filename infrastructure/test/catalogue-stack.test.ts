@@ -17,6 +17,9 @@ beforeAll(() => {
   const stack = new CatalogueStack(app, 'TestCatalogueStack', {
     projectName: 'SmartRetailX',
     environmentName: 'dev',
+    userPoolIssuer: 'https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_testpool',
+    userPoolClientId: 'test-client-id',
+    webApplicationUrl: 'http://localhost:5173',
   });
   template = Template.fromStack(stack);
 });
@@ -148,7 +151,20 @@ test('creates one HTTP API and one Lambda proxy integration with development COR
   });
 });
 
-test('creates all Catalogue routes against the shared Lambda integration', () => {
+test('creates a Cognito JWT authorizer for the configured issuer and client', () => {
+  template.resourceCountIs('AWS::ApiGatewayV2::Authorizer', 1);
+  template.hasResourceProperties('AWS::ApiGatewayV2::Authorizer', {
+    AuthorizerType: 'JWT',
+    IdentitySource: ['$request.header.Authorization'],
+    JwtConfiguration: {
+      Audience: ['test-client-id'],
+      Issuer: 'https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_testpool',
+    },
+    Name: 'smartretailx-catalogue-dev-jwt-authorizer',
+  });
+});
+
+test('protects all Catalogue routes with the shared JWT authorizer and openid scope', () => {
   const integrations = template.findResources('AWS::ApiGatewayV2::Integration');
   const integrationLogicalId = Object.keys(integrations)[0];
   expect(integrationLogicalId).toBeDefined();
@@ -165,8 +181,14 @@ test('creates all Catalogue routes against the shared Lambda integration', () =>
     ].sort(),
   );
 
+  const authorizers = template.findResources('AWS::ApiGatewayV2::Authorizer');
+  const authorizerLogicalId = Object.keys(authorizers)[0];
+  expect(authorizerLogicalId).toBeDefined();
+
   for (const route of routes) {
-    expect(route.Properties.AuthorizationType).toBe('NONE');
+    expect(route.Properties.AuthorizationType).toBe('JWT');
+    expect(route.Properties.AuthorizationScopes).toEqual(['openid']);
+    expect(route.Properties.AuthorizerId).toEqual({ Ref: authorizerLogicalId });
     expect(route.Properties.Target).toEqual({
       'Fn::Join': ['', ['integrations/', { Ref: integrationLogicalId }]],
     });

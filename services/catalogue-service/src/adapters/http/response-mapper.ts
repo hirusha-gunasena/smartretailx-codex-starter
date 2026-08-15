@@ -1,6 +1,7 @@
 import type { ApiErrorResponse, ApiSuccessResponse } from '@smartretailx/api-contracts';
 import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
 import {
+  CatalogueAuthorizationError,
   ProductConflictError,
   ProductNotFoundError,
   ProductValidationError,
@@ -57,6 +58,10 @@ export const mapErrorToResponse = (
   error: unknown,
   requestId: string,
 ): APIGatewayProxyStructuredResultV2 => {
+  if (error instanceof CatalogueAuthorizationError) {
+    return errorResponse(403, 'FORBIDDEN', 'Access denied.', requestId);
+  }
+
   if (error instanceof HttpRequestError) {
     return errorResponse(error.statusCode, error.code, error.message, requestId);
   }

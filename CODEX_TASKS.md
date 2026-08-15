@@ -61,3 +61,32 @@ Add end-to-end scripts, Postman/Newman collection and k6 performance tests.
 ## Task 015 — DR configuration
 
 Add optional secondary-region stacks and deployment documentation. Do not deploy without explicit approval.
+
+## Task 018 — Cognito / OAuth 2.0 / JWT / RBAC foundation
+
+| Gate                             | State    |
+| -------------------------------- | -------- |
+| Auth implementation              | COMPLETE |
+| Auth local/CDK tests             | COMPLETE |
+| Auth CDK synth                   | COMPLETE |
+| Auth deployment                  | NOT YET  |
+| Secure Catalogue implementation  | COMPLETE |
+| Secure Catalogue deployment      | NOT YET  |
+| Live OAuth/JWT/RBAC verification | NOT YET  |
+
+No Cognito resources, users, credentials or other AWS resources were created or modified by this
+task.
+
+Implemented scope:
+
+- Dedicated `SmartRetailX-dev-Auth` CDK stack owning an email-sign-in User Pool, optional TOTP MFA,
+  `customer`/`admin` groups, a public authorization-code/PKCE SPA client and Cognito-owned domain.
+- Central development callback/logout configuration and non-secret CloudFormation outputs.
+- One Cognito JWT authorizer protecting all five Catalogue HTTP API routes with the `openid` scope.
+- Fail-closed Catalogue Lambda RBAC: both roles may read; only `admin` may write.
+- Unit, handler and CDK assertion coverage for allowed and denied paths and security-sensitive
+  configuration.
+- Security, architecture and deployment-gate documentation.
+
+Deferred explicitly: frontend sign-in/token handling, user creation and group assignment, other API
+authentication, hosted-environment callback URLs, AWS deployment and live authorization testing.
