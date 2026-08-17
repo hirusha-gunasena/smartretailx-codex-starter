@@ -150,18 +150,26 @@ export class CatalogueStack extends cdk.Stack {
 
     catalogueApi.addRoutes({
       path: '/api/v1/products',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: catalogueIntegration,
+      authorizer: new apigatewayv2.HttpNoneAuthorizer(),
+    });
+    catalogueApi.addRoutes({
+      path: '/api/v1/products',
+      methods: [apigatewayv2.HttpMethod.POST],
       integration: catalogueIntegration,
       authorizer: catalogueAuthorizer,
       authorizationScopes: ['openid'],
     });
     catalogueApi.addRoutes({
       path: '/api/v1/products/{productId}',
-      methods: [
-        apigatewayv2.HttpMethod.GET,
-        apigatewayv2.HttpMethod.PATCH,
-        apigatewayv2.HttpMethod.DELETE,
-      ],
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: catalogueIntegration,
+      authorizer: new apigatewayv2.HttpNoneAuthorizer(),
+    });
+    catalogueApi.addRoutes({
+      path: '/api/v1/products/{productId}',
+      methods: [apigatewayv2.HttpMethod.PATCH, apigatewayv2.HttpMethod.DELETE],
       integration: catalogueIntegration,
       authorizer: catalogueAuthorizer,
       authorizationScopes: ['openid'],

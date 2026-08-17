@@ -36,17 +36,6 @@ const CUSTOMER_JWT: JwtAuthorizerContext = {
   scopes: ['openid', 'email', 'profile'],
 };
 
-const jwtWithGroups = (
-  jwtAuthorizer: JwtAuthorizerContext,
-  groups: string | string[],
-): JwtAuthorizerContext => ({
-  claims: {
-    ...(jwtAuthorizer.claims ?? {}),
-    'cognito:groups': groups,
-  },
-  ...(jwtAuthorizer.scopes === undefined ? {} : { scopes: jwtAuthorizer.scopes }),
-});
-
 const createEvent = (
   method: string,
   rawPath: string,
@@ -342,60 +331,50 @@ describe('catalogue HTTP API handler', () => {
   });
 
   test.each([
-    ['GET', '/api/v1/products', {}],
-    ['GET', `/api/v1/products/${PRODUCT_ID}`, { productId: PRODUCT_ID }],
-  ] as const)(
-    'rejects %s %s when no recognized group is present',
-    async (method, rawPath, options) => {
-      const response = await createHandler(new InMemoryProductRepository([productFixture()]))(
-        createEvent(method, rawPath, {
-          ...options,
-          jwt: jwtWithGroups(CUSTOMER_JWT, '[support]'),
-        }),
-      );
+    ['POST', '/api/v1/products', { body: JSON.stringify(createProductRequest()) }],
+    [
+      'PATCH',
+      `/api/v1/products/${PRODUCT_ID}`,
+      { body: JSON.stringify({ price: 69.99 }), productId: PRODUCT_ID },
+    ],
+    ['DELETE', `/api/v1/products/${PRODUCT_ID}`, { productId: PRODUCT_ID }],
+  ] as const)('rejects anonymous %s writes with 403', async (method, rawPath, options) => {
+    const response = await createHandler(new InMemoryProductRepository([productFixture()]))(
+      createEvent(method, rawPath, { ...options, authorizationMode: 'missing-authorizer' }),
+    );
 
-      expect(response.statusCode).toBe(403);
-      expect(parseBody<ApiErrorResponse>(response).error.code).toBe('FORBIDDEN');
-    },
-  );
+    expect(response.statusCode).toBe(403);
+    expect(parseBody<ApiErrorResponse>(response).error).toEqual({
+      code: 'FORBIDDEN',
+      message: 'Access denied.',
+    });
+  });
 
-  test('denies access before calling a repository operation', async () => {
-    const repository = new InMemoryProductRepository([productFixture()]);
-    const listSpy = jest.spyOn(repository, 'list');
+  test('allows anonymous GET /api/v1/products without JWT authorization', async () => {
+    const handler = createHandler(new InMemoryProductRepository([productFixture()]));
 
-    const response = await createHandler(repository)(
+    const response = await handler(
       createEvent('GET', '/api/v1/products', { authorizationMode: 'missing-authorizer' }),
     );
 
-    expect(response.statusCode).toBe(403);
-    expect(listSpy).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(parseBody<ApiSuccessResponse<readonly Product[]>>(response).data).toEqual([
+      productFixture(),
+    ]);
   });
 
-  test('denies an HTTP API event with an authorizer but no jwt context', async () => {
-    const response = await createHandler()(
-      createEvent('GET', '/api/v1/products', { authorizationMode: 'missing-jwt' }),
-    );
+  test('allows anonymous GET /api/v1/products/{id} without JWT authorization', async () => {
+    const handler = createHandler(new InMemoryProductRepository([productFixture()]));
 
-    expect(response.statusCode).toBe(403);
-  });
-
-  test('denies an HTTP API jwt context with no claims', async () => {
-    const response = await createHandler()(
-      createEvent('GET', '/api/v1/products', { jwt: { scopes: ['openid'] } }),
-    );
-
-    expect(response.statusCode).toBe(403);
-  });
-
-  test('rejects malformed group claims with 403', async () => {
-    const response = await createHandler()(
-      createEvent('GET', '/api/v1/products', {
-        jwt: jwtWithGroups(CUSTOMER_JWT, 'customer'),
+    const response = await handler(
+      createEvent('GET', `/api/v1/products/${PRODUCT_ID}`, {
+        productId: PRODUCT_ID,
+        authorizationMode: 'missing-authorizer',
       }),
     );
 
-    expect(response.statusCode).toBe(403);
-    expect(parseBody<ApiErrorResponse>(response).error.code).toBe('FORBIDDEN');
+    expect(response.statusCode).toBe(200);
+    expect(parseBody<ApiSuccessResponse<Product>>(response).data).toEqual(productFixture());
   });
 
   test('rejects an invalid productId path parameter with 400', async () => {

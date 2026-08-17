@@ -49,7 +49,6 @@ export type CatalogueHandler = (
 
 const PRODUCTS_PATH = '/api/v1/products';
 const PRODUCT_PATH_PATTERN = /^\/api\/v1\/products\/[^/]+$/;
-const READ_ROLES = new Set([CATALOGUE_ROLES.customer, CATALOGUE_ROLES.admin]);
 const WRITE_ROLES = new Set([CATALOGUE_ROLES.admin]);
 
 export const createCatalogueHandler = (
@@ -64,12 +63,6 @@ export const createCatalogueHandler = (
 
     try {
       if (method === 'GET' && event.rawPath === PRODUCTS_PATH) {
-        authorizeCatalogueRequest(
-          jwtAuthorizer,
-          READ_ROLES,
-          authorizationMetadata,
-          authorizationLogger,
-        );
         const products: readonly Product[] = await useCases.listProducts.execute();
         return successResponse(200, products, requestId);
       }
@@ -88,12 +81,6 @@ export const createCatalogueHandler = (
 
       if (PRODUCT_PATH_PATTERN.test(event.rawPath)) {
         if (method === 'GET') {
-          authorizeCatalogueRequest(
-            jwtAuthorizer,
-            READ_ROLES,
-            authorizationMetadata,
-            authorizationLogger,
-          );
           const productId = parseProductId(event);
           const product = await useCases.getProduct.execute(productId);
           return successResponse(200, product, requestId);

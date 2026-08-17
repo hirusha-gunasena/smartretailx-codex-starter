@@ -165,7 +165,7 @@ test('creates a Cognito JWT authorizer for the configured issuer and client', ()
   });
 });
 
-test('protects all Catalogue routes with the shared JWT authorizer and openid scope', () => {
+test('protects mutation Catalogue routes with JWT authorizer while leaving GET routes public', () => {
   const integrations = template.findResources('AWS::ApiGatewayV2::Integration');
   const integrationLogicalId = Object.keys(integrations)[0];
   expect(integrationLogicalId).toBeDefined();
@@ -187,12 +187,20 @@ test('protects all Catalogue routes with the shared JWT authorizer and openid sc
   expect(authorizerLogicalId).toBeDefined();
 
   for (const route of routes) {
-    expect(route.Properties.AuthorizationType).toBe('JWT');
-    expect(route.Properties.AuthorizationScopes).toEqual(['openid']);
-    expect(route.Properties.AuthorizerId).toEqual({ Ref: authorizerLogicalId });
+    const routeKey = route.Properties.RouteKey as string;
     expect(route.Properties.Target).toEqual({
       'Fn::Join': ['', ['integrations/', { Ref: integrationLogicalId }]],
     });
+
+    if (routeKey.startsWith('GET ')) {
+      expect(route.Properties.AuthorizationType).toBe('NONE');
+      expect(route.Properties).not.toHaveProperty('AuthorizerId');
+      expect(route.Properties).not.toHaveProperty('AuthorizationScopes');
+    } else {
+      expect(route.Properties.AuthorizationType).toBe('JWT');
+      expect(route.Properties.AuthorizationScopes).toEqual(['openid']);
+      expect(route.Properties.AuthorizerId).toEqual({ Ref: authorizerLogicalId });
+    }
   }
 });
 
