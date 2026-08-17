@@ -35,16 +35,17 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 
   const response = await fetch(url, { ...options, headers });
 
+  let body: any;
+  try {
+    body = await response.json();
+  } catch {
+    // Ignored
+  }
+
   if (!response.ok) {
-    let message = 'An error occurred';
-    try {
-      const body = await response.json();
-      message = body.message || message;
-    } catch {
-      // Ignored
-    }
+    const message = body?.error?.message || body?.message || 'An error occurred';
     throw new ApiError(response.status, message);
   }
 
-  return response.json();
+  return body && typeof body === 'object' && 'data' in body ? body.data : body;
 };

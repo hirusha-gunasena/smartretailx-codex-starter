@@ -10,7 +10,8 @@ const cognitoAuthConfig = {
   scope: 'openid email profile',
   userStore: new WebStorageStateStore({ store: window.sessionStorage }),
   onSigninCallback: () => {
-    window.history.replaceState({}, document.title, window.location.pathname);
+    window.history.replaceState({}, document.title, '/');
+    window.location.href = `${window.location.origin}/`;
   },
 };
 
