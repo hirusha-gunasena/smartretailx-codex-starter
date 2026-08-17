@@ -20,7 +20,7 @@ export interface OrderServiceStackProps extends cdk.StackProps {
   readonly repository: IRepository;
   readonly userPoolClientId: string;
   readonly userPoolIssuer: string;
-  readonly webApplicationUrl: string;
+  readonly webApplicationUrls: string[];
 }
 
 const ORDER_CONTAINER_PORT = 3_000;
@@ -271,7 +271,7 @@ export class OrderServiceStack extends cdk.Stack {
       description: 'SmartRetailX authenticated Order HTTP API',
       createDefaultStage: false,
       corsPreflight: {
-        allowOrigins: [props.webApplicationUrl],
+        allowOrigins: props.webApplicationUrls,
         allowHeaders: ['Authorization', 'Content-Type'],
         allowMethods: [
           apigatewayv2.CorsHttpMethod.GET,

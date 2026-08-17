@@ -17,7 +17,7 @@ export interface CatalogueStackProps extends cdk.StackProps {
   readonly projectName: string;
   readonly userPoolClientId: string;
   readonly userPoolIssuer: string;
-  readonly webApplicationUrl: string;
+  readonly webApplicationUrls: string[];
 }
 
 const findRepositoryRoot = (startPath: string): string => {
@@ -127,7 +127,7 @@ export class CatalogueStack extends cdk.Stack {
       apiName: `${functionName}-http-api`,
       description: 'SmartRetailX Product Catalogue HTTP API',
       corsPreflight: {
-        allowOrigins: [props.webApplicationUrl],
+        allowOrigins: props.webApplicationUrls,
         allowHeaders: ['Content-Type', 'Authorization'],
         allowMethods: [
           apigatewayv2.CorsHttpMethod.GET,

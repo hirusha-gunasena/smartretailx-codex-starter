@@ -19,7 +19,7 @@ beforeAll(() => {
     environmentName: 'dev',
     userPoolIssuer: 'https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_testpool',
     userPoolClientId: 'test-client-id',
-    webApplicationUrl: 'http://localhost:5173',
+    webApplicationUrls: ['http://localhost:5173', 'https://d123456789.cloudfront.net'],
   });
   template = Template.fromStack(stack);
 });
@@ -130,15 +130,16 @@ test('applies the required non-identifying development tags', () => {
   });
 });
 
-test('creates one HTTP API and one Lambda proxy integration with development CORS', () => {
+test('creates an HTTP API with configured CORS and one Cognito JWT authorizer', () => {
   template.resourceCountIs('AWS::ApiGatewayV2::Api', 1);
   template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
+    Name: 'smartretailx-catalogue-dev-http-api',
+    ProtocolType: 'HTTP',
     CorsConfiguration: {
       AllowHeaders: ['Content-Type', 'Authorization'],
       AllowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-      AllowOrigins: ['http://localhost:5173'],
+      AllowOrigins: ['http://localhost:5173', 'https://d123456789.cloudfront.net'],
     },
-    ProtocolType: 'HTTP',
   });
 
   template.resourceCountIs('AWS::ApiGatewayV2::Integration', 1);

@@ -36,7 +36,7 @@ beforeAll(() => {
     repository: registryStack.repository,
     userPoolIssuer: 'https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_example',
     userPoolClientId: 'example-spa-client-id',
-    webApplicationUrl: 'http://localhost:5173',
+    webApplicationUrls: ['http://localhost:5173', 'https://d123456789.cloudfront.net'],
   });
   template = Template.fromStack(stack);
 });
@@ -349,7 +349,7 @@ test('creates a VPC Link private ALB integration with stage-free path mapping', 
   });
 });
 
-test('creates one localhost-CORS HTTP API and one Cognito JWT authorizer', () => {
+test('creates an HTTP API with configured CORS and one Cognito JWT authorizer', () => {
   template.resourceCountIs('AWS::ApiGatewayV2::Api', 1);
   template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
     Name: 'smartretailx-order-api-dev',
@@ -357,7 +357,7 @@ test('creates one localhost-CORS HTTP API and one Cognito JWT authorizer', () =>
     CorsConfiguration: {
       AllowHeaders: ['Authorization', 'Content-Type'],
       AllowMethods: ['GET', 'POST', 'OPTIONS'],
-      AllowOrigins: ['http://localhost:5173'],
+      AllowOrigins: ['http://localhost:5173', 'https://d123456789.cloudfront.net'],
     },
   });
   template.resourceCountIs('AWS::ApiGatewayV2::Authorizer', 1);

@@ -5,7 +5,7 @@ import { WebStorageStateStore } from 'oidc-client-ts';
 const cognitoAuthConfig = {
   authority: import.meta.env.VITE_COGNITO_ISSUER,
   client_id: import.meta.env.VITE_COGNITO_CLIENT_ID,
-  redirect_uri: import.meta.env.VITE_COGNITO_REDIRECT_URI,
+  redirect_uri: `${window.location.origin}/auth/callback`,
   response_type: 'code',
   scope: 'openid email profile',
   userStore: new WebStorageStateStore({ store: window.sessionStorage }),
@@ -68,7 +68,7 @@ const AuthContextBridge: React.FC<{ children: React.ReactNode }> = ({ children }
     login: () => auth.signinRedirect(),
     logout: () => {
       auth.removeUser();
-      window.location.href = import.meta.env.VITE_COGNITO_LOGOUT_URI;
+      window.location.href = `${window.location.origin}/`;
     },
   };
 

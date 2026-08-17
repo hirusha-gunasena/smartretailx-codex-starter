@@ -7,6 +7,7 @@ export interface AuthStackProps extends cdk.StackProps {
   readonly environmentName: string;
   readonly projectName: string;
   readonly webAuthentication: WebAuthenticationConfiguration;
+  readonly cloudFrontDomain: string;
 }
 
 export class AuthStack extends cdk.Stack {
@@ -78,8 +79,11 @@ export class AuthStack extends cdk.Stack {
           clientCredentials: false,
         },
         scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL, cognito.OAuthScope.PROFILE],
-        callbackUrls: [props.webAuthentication.callbackUrl],
-        logoutUrls: [props.webAuthentication.logoutUrl],
+        callbackUrls: [
+          props.webAuthentication.callbackUrl,
+          `https://${props.cloudFrontDomain}/auth/callback`,
+        ],
+        logoutUrls: [props.webAuthentication.logoutUrl, `https://${props.cloudFrontDomain}/`],
       },
       preventUserExistenceErrors: true,
       enableTokenRevocation: true,
@@ -113,7 +117,10 @@ export class AuthStack extends cdk.Stack {
       value: this.issuer,
     });
     new cdk.CfnOutput(this, 'OAuthCallbackUrl', {
-      value: props.webAuthentication.callbackUrl,
+      value: [
+        props.webAuthentication.callbackUrl,
+        `https://${props.cloudFrontDomain}/auth/callback`,
+      ].join(','),
     });
   }
 }

@@ -11,6 +11,7 @@ beforeAll(() => {
     projectName: 'SmartRetailX',
     environmentName: 'dev',
     webAuthentication: getWebAuthenticationConfiguration('dev'),
+    cloudFrontDomain: 'd123456789.cloudfront.net',
   });
   template = Template.fromStack(stack);
 });
@@ -75,12 +76,15 @@ test('creates a public authorization-code client for the local web application',
     AllowedOAuthFlows: ['code'],
     AllowedOAuthFlowsUserPoolClient: true,
     AllowedOAuthScopes: ['openid', 'email', 'profile'],
-    CallbackURLs: ['http://localhost:5173/auth/callback'],
+    CallbackURLs: [
+      'http://localhost:5173/auth/callback',
+      'https://d123456789.cloudfront.net/auth/callback',
+    ],
     ClientName: 'smartretailx-web-dev',
     EnableTokenRevocation: true,
     GenerateSecret: false,
     IdTokenValidity: 60,
-    LogoutURLs: ['http://localhost:5173/'],
+    LogoutURLs: ['http://localhost:5173/', 'https://d123456789.cloudfront.net/'],
     PreventUserExistenceErrors: 'ENABLED',
     RefreshTokenValidity: 10080,
     SupportedIdentityProviders: ['COGNITO'],
@@ -110,7 +114,7 @@ test('publishes only non-secret authentication integration values', () => {
   template.hasOutput('CognitoDomain', {});
   template.hasOutput('CognitoIssuer', {});
   template.hasOutput('OAuthCallbackUrl', {
-    Value: 'http://localhost:5173/auth/callback',
+    Value: 'http://localhost:5173/auth/callback,https://d123456789.cloudfront.net/auth/callback',
   });
 
   expect(JSON.stringify(template.toJSON())).not.toContain('ClientSecret');

@@ -13,11 +13,19 @@ import { OrderRegistryStack } from '../lib/order-registry-stack.js';
 import { OrderServiceStack } from '../lib/order-service-stack.js';
 import { OrderWorkflowStack } from '../lib/order-workflow-stack.js';
 
+import { FrontendStack } from '../lib/frontend-stack.js';
+
 const app = new cdk.App();
 const projectName = app.node.tryGetContext('projectName') ?? 'SmartRetailX';
 const environment = app.node.tryGetContext('environment') ?? 'dev';
 const webAuthentication = getWebAuthenticationConfiguration(environment);
 const orderImage = getOrderImageConfiguration(app.node.tryGetContext('orderImageTag'));
+
+const frontendStack = new FrontendStack(app, `${projectName}-${environment}-Frontend`, {
+  description: 'SmartRetailX Frontend hosting infrastructure',
+  projectName,
+  environmentName: environment,
+});
 
 new FoundationStack(app, `${projectName}-${environment}-Foundation`, {
   description: 'SmartRetailX foundational placeholder stack',
@@ -33,6 +41,7 @@ const authStack = new AuthStack(app, `${projectName}-${environment}-Auth`, {
   projectName,
   environmentName: environment,
   webAuthentication,
+  cloudFrontDomain: frontendStack.cloudFrontDomain,
 });
 
 new CatalogueStack(app, `${projectName}-${environment}-Catalogue`, {
@@ -41,7 +50,10 @@ new CatalogueStack(app, `${projectName}-${environment}-Catalogue`, {
   environmentName: environment,
   userPoolIssuer: authStack.issuer,
   userPoolClientId: authStack.userPoolClientId,
-  webApplicationUrl: webAuthentication.applicationUrl,
+  webApplicationUrls: [
+    webAuthentication.applicationUrl,
+    `https://${frontendStack.cloudFrontDomain}`,
+  ],
 });
 
 const orderEventsStack = new OrderEventsStack(app, `${projectName}-${environment}-OrderEvents`, {
@@ -68,7 +80,10 @@ new OrderServiceStack(app, `${projectName}-${environment}-OrderService`, {
   repository: orderRegistryStack.repository,
   userPoolIssuer: authStack.issuer,
   userPoolClientId: authStack.userPoolClientId,
-  webApplicationUrl: webAuthentication.applicationUrl,
+  webApplicationUrls: [
+    webAuthentication.applicationUrl,
+    `https://${frontendStack.cloudFrontDomain}`,
+  ],
 });
 
 new InventoryStack(app, `${projectName}-${environment}-Inventory`, {
