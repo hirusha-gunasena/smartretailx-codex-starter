@@ -35,7 +35,8 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 
   const response = await fetch(url, { ...options, headers });
 
-  let body: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let body: any; // Justified: Response payload can be of any shape (object, array, primitive)
   try {
     body = await response.json();
   } catch {
