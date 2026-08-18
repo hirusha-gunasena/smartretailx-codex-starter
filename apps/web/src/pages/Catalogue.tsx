@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { Product } from '../api/catalogue';
 import { getProducts } from '../api/catalogue';
 import { useCart } from '../cart/CartProvider';
@@ -9,13 +9,33 @@ export const Catalogue: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { addToCart } = useCart();
+  const location = useLocation();
 
   useEffect(() => {
     getProducts()
-      .then(setProducts)
+      .then((allProducts) => {
+        const params = new URLSearchParams(location.search);
+        const searchQuery = params.get('search')?.toLowerCase();
+        const categoryQuery = params.get('category')?.toLowerCase();
+        
+        let filtered = allProducts;
+        if (searchQuery) {
+          filtered = filtered.filter(p => 
+            p.name.toLowerCase().includes(searchQuery) || 
+            (p.description && p.description.toLowerCase().includes(searchQuery))
+          );
+        }
+        if (categoryQuery) {
+          filtered = filtered.filter(p => 
+            p.name.toLowerCase().includes(categoryQuery) || 
+            (p.description && p.description.toLowerCase().includes(categoryQuery))
+          );
+        }
+        setProducts(filtered);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [location.search]);
 
   if (loading)
     return (

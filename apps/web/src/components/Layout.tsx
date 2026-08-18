@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User as UserIcon, LogOut, Package, Settings, Search } from 'lucide-react';
 import { useSession } from '../auth/AuthProvider';
 import { useCart } from '../cart/CartProvider';
@@ -8,9 +8,17 @@ export const Layout: React.FC = () => {
   const { isAuthenticated, user, role, login, logout } = useSession();
   const { items } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const q = formData.get('q') as string;
+    if (q) navigate(`/products?search=${encodeURIComponent(q)}`);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-white font-sans selection:bg-black selection:text-white">
@@ -40,7 +48,7 @@ export const Layout: React.FC = () => {
                   Orders
                 </Link>
               )}
-              {role === 'admin' && (
+              {isAuthenticated && role === 'admin' && (
                 <Link
                   to="/admin/products"
                   className={`text-sm font-semibold uppercase tracking-wider flex items-center gap-1 transition-colors hover:text-gray-500 ${location.pathname.startsWith('/admin') ? 'text-black' : 'text-gray-900'}`}
@@ -52,10 +60,15 @@ export const Layout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-6">
-            <button className="hidden sm:flex text-gray-900 hover:text-gray-500 transition-colors items-center gap-2">
-              <Search className="w-5 h-5" strokeWidth={1.5} />
-              <span className="text-sm font-semibold uppercase tracking-wider hidden lg:inline">Search</span>
-            </button>
+            <form onSubmit={handleSearch} className="hidden sm:flex items-center gap-2 border-b border-gray-200 focus-within:border-gray-900 pb-1 transition-colors">
+              <Search className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
+              <input 
+                type="text" 
+                name="q" 
+                placeholder="SEARCH..." 
+                className="text-xs font-semibold uppercase tracking-wider outline-none w-24 focus:w-32 transition-all bg-transparent placeholder-gray-400 text-gray-900"
+              />
+            </form>
 
             {isAuthenticated ? (
               <div className="flex items-center gap-6 group relative">

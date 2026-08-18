@@ -1,11 +1,22 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { useCart } from '../cart/CartProvider';
+import { useSession } from '../auth/AuthProvider';
 import { Trash2, Plus, Minus } from 'lucide-react';
 
 export const Cart: React.FC = () => {
   const { items, updateQuantity, removeFromCart, total } = useCart();
+  const { isAuthenticated } = useSession();
   const navigate = useNavigate();
+
+  const handleCheckout = () => {
+    if (isAuthenticated) {
+      navigate('/checkout');
+    } else {
+      toast.error('Please sign in to place an order');
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -133,7 +144,7 @@ export const Cart: React.FC = () => {
               </div>
 
               <button
-                onClick={() => navigate('/checkout')}
+                onClick={handleCheckout}
                 className="mt-8 w-full bg-black text-white py-4 text-xs font-semibold uppercase tracking-widest hover:bg-gray-800 transition-colors"
               >
                 Proceed to Checkout

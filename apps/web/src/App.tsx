@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { Layout } from './components/Layout';
 import { useSession } from './auth/AuthProvider';
 
@@ -37,8 +38,21 @@ const PrivateRoute = ({ roles }: { roles?: ('admin' | 'customer')[] }) => {
 
 const App: React.FC = () => {
   return (
-    <Routes>
-      <Route element={<Layout />}>
+    <>
+      <Toaster 
+        position="bottom-center" 
+        toastOptions={{
+          style: {
+            background: '#000',
+            color: '#fff',
+            borderRadius: '0px',
+            fontSize: '14px',
+            fontWeight: 500,
+          }
+        }} 
+      />
+      <Routes>
+        <Route element={<Layout />}>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
@@ -64,8 +78,9 @@ const App: React.FC = () => {
           <Route path="/admin/products" element={<AdminProducts />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
         </Route>
-      </Route>
-    </Routes>
+        </Route>
+      </Routes>
+    </>
   );
 };
 
