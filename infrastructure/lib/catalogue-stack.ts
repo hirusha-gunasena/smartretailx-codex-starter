@@ -9,6 +9,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import type { Construct } from 'constructs';
 
@@ -64,6 +65,28 @@ export class CatalogueStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    // Public-read S3 bucket for product images
+    const imagesBucket = new s3.Bucket(this, 'ProductImagesBucket', {
+      bucketName: `${resourcePrefix}-images-${props.environmentName}-${cdk.Aws.ACCOUNT_ID}`,
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: false,
+        blockPublicPolicy: false,
+        ignorePublicAcls: false,
+        restrictPublicBuckets: false,
+      }),
+      publicReadAccess: true,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.PUT],
+          allowedOrigins: props.webApplicationUrls,
+          allowedHeaders: ['*'],
+        },
+      ],
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
     const catalogueLogGroup = new logs.LogGroup(this, 'CatalogueLogGroup', {
       logGroupName: `/aws/lambda/${functionName}`,
       retention: logs.RetentionDays.ONE_WEEK,
@@ -80,6 +103,7 @@ export class CatalogueStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(10),
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
+        PRODUCT_IMAGES_BUCKET_NAME: imagesBucket.bucketName,
       },
       logGroup: catalogueLogGroup,
       projectRoot: repositoryRoot,
@@ -114,6 +138,7 @@ export class CatalogueStack extends cdk.Stack {
         resources: [productsTable.tableArn],
       }),
     );
+    imagesBucket.grantPut(catalogueFunction);
 
     const catalogueIntegration = new integrations.HttpLambdaIntegration(
       'CatalogueIntegration',
@@ -162,6 +187,13 @@ export class CatalogueStack extends cdk.Stack {
       authorizationScopes: ['openid'],
     });
     catalogueApi.addRoutes({
+      path: '/api/v1/products/upload-url',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: catalogueIntegration,
+      authorizer: catalogueAuthorizer,
+      authorizationScopes: ['openid'],
+    });
+    catalogueApi.addRoutes({
       path: '/api/v1/products/{productId}',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: catalogueIntegration,
@@ -180,6 +212,9 @@ export class CatalogueStack extends cdk.Stack {
     });
     new cdk.CfnOutput(this, 'ProductsTableName', {
       value: productsTable.tableName,
+    });
+    new cdk.CfnOutput(this, 'ProductImagesBucketName', {
+      value: imagesBucket.bucketName,
     });
     new cdk.CfnOutput(this, 'CatalogueFunctionName', {
       value: catalogueFunction.functionName,

@@ -28,7 +28,11 @@ const isVerifiedAccessTokenClaims = (value: unknown): value is VerifiedAccessTok
   typeof value === 'object' && value !== null;
 
 const roleFromGroups = (groups: unknown): OrderRole => {
-  if (!Array.isArray(groups) || groups.length !== 1) {
+  if (groups === undefined || (Array.isArray(groups) && groups.length === 0)) {
+    return 'customer';
+  }
+
+  if (!Array.isArray(groups) || groups.length > 1) {
     throw new OrderAuthorizationError('AUTH_INVALID_GROUPS');
   }
 

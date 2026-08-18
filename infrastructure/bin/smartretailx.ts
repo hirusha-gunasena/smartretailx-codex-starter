@@ -91,6 +91,12 @@ new InventoryStack(app, `${projectName}-${environment}-Inventory`, {
   projectName,
   environmentName: environment,
   orderEventBus: orderEventsStack.eventBus,
+  userPoolIssuer: authStack.issuer,
+  userPoolClientId: authStack.userPoolClientId,
+  webApplicationUrls: [
+    webAuthentication.applicationUrl,
+    `https://${frontendStack.cloudFrontDomain}`,
+  ],
 });
 
 new OrderWorkflowStack(app, `${projectName}-${environment}-OrderWorkflow`, {

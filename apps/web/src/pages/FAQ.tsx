@@ -4,25 +4,30 @@ import { Link } from 'react-router-dom';
 
 const faqs = [
   {
-    question: "What is your return policy?",
-    answer: "We offer a 30-day money-back guarantee on all products. If you are not completely satisfied with your purchase, simply return it in its original packaging for a full refund."
+    question: 'What is your return policy?',
+    answer:
+      'We offer a 30-day money-back guarantee on all products. If you are not completely satisfied with your purchase, simply return it in its original packaging for a full refund.',
   },
   {
-    question: "How long does shipping take?",
-    answer: "Standard shipping takes 3-5 business days. We also offer expedited shipping (1-2 business days) at checkout. Orders placed before 2 PM PST are processed the same day."
+    question: 'How long does shipping take?',
+    answer:
+      'Standard shipping takes 3-5 business days. We also offer expedited shipping (1-2 business days) at checkout. Orders placed before 2 PM PST are processed the same day.',
   },
   {
-    question: "Do you ship internationally?",
-    answer: "Currently, we only ship within the United States and Canada. We are working hard to expand our logistics network to support global shipping in the near future."
+    question: 'Do you ship internationally?',
+    answer:
+      'Currently, we only ship within the United States and Canada. We are working hard to expand our logistics network to support global shipping in the near future.',
   },
   {
-    question: "Are my payment details secure?",
-    answer: "Absolutely. We use industry-standard AES-256 encryption and partner with certified, compliant payment gateways. We never store your raw credit card information on our servers."
+    question: 'Are my payment details secure?',
+    answer:
+      'Absolutely. We use industry-standard AES-256 encryption and partner with certified, compliant payment gateways. We never store your raw credit card information on our servers.',
   },
   {
-    question: "How do I track my order?",
-    answer: "Once your order has shipped, you will receive an email with a tracking number. You can also view the real-time status of your shipments in the 'My Orders' section of your account."
-  }
+    question: 'How do I track my order?',
+    answer:
+      "Once your order has shipped, you will receive an email with a tracking number. You can also view the real-time status of your shipments in the 'My Orders' section of your account.",
+  },
 ];
 
 export const FAQ: React.FC = () => {
@@ -56,9 +61,15 @@ export const FAQ: React.FC = () => {
                     {faq.question}
                   </span>
                   {isOpen ? (
-                    <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0 ml-4" strokeWidth={1.5} />
+                    <ChevronUp
+                      className="w-4 h-4 text-gray-400 flex-shrink-0 ml-4"
+                      strokeWidth={1.5}
+                    />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0 ml-4" strokeWidth={1.5} />
+                    <ChevronDown
+                      className="w-4 h-4 text-gray-400 flex-shrink-0 ml-4"
+                      strokeWidth={1.5}
+                    />
                   )}
                 </button>
                 {isOpen && (

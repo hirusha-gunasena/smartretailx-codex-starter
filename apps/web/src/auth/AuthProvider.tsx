@@ -56,8 +56,7 @@ const AuthContextBridge: React.FC<{ children: React.ReactNode }> = ({ children }
     if (!auth.user?.profile) return null;
     const groups = auth.user.profile['cognito:groups'] as string[];
     if (groups?.includes('admin')) return 'admin';
-    if (groups?.includes('customer')) return 'customer';
-    return null;
+    return 'customer'; // Default role for users without explicit groups
   };
 
   const value: SessionContextType = {
@@ -72,7 +71,7 @@ const AuthContextBridge: React.FC<{ children: React.ReactNode }> = ({ children }
       const cognitoDomain = import.meta.env.VITE_COGNITO_DOMAIN;
       const clientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
       const logoutUri = `${window.location.origin}/`;
-      
+
       if (cognitoDomain && clientId) {
         window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
       } else {

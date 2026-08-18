@@ -17,18 +17,20 @@ export const Catalogue: React.FC = () => {
         const params = new URLSearchParams(location.search);
         const searchQuery = params.get('search')?.toLowerCase();
         const categoryQuery = params.get('category')?.toLowerCase();
-        
+
         let filtered = allProducts;
         if (searchQuery) {
-          filtered = filtered.filter(p => 
-            p.name.toLowerCase().includes(searchQuery) || 
-            (p.description && p.description.toLowerCase().includes(searchQuery))
+          filtered = filtered.filter(
+            (p) =>
+              p.name.toLowerCase().includes(searchQuery) ||
+              (p.description && p.description.toLowerCase().includes(searchQuery)),
           );
         }
         if (categoryQuery) {
-          filtered = filtered.filter(p => 
-            p.name.toLowerCase().includes(categoryQuery) || 
-            (p.description && p.description.toLowerCase().includes(categoryQuery))
+          filtered = filtered.filter(
+            (p) =>
+              p.name.toLowerCase().includes(categoryQuery) ||
+              (p.description && p.description.toLowerCase().includes(categoryQuery)),
           );
         }
         setProducts(filtered);
@@ -43,16 +45,9 @@ export const Catalogue: React.FC = () => {
         Loading products...
       </div>
     );
-  if (error)
-    return (
-      <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>
-    );
+  if (error) return <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>;
   if (products.length === 0)
-    return (
-      <div className="text-center py-20 text-gray-500 text-sm">
-        No products available.
-      </div>
-    );
+    return <div className="text-center py-20 text-gray-500 text-sm">No products available.</div>;
 
   return (
     <div className="bg-white">

@@ -5,6 +5,9 @@ import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as eventTargets from 'aws-cdk-lib/aws-events-targets';
+import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
+import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as eventSources from 'aws-cdk-lib/aws-lambda-event-sources';
@@ -17,6 +20,9 @@ export interface InventoryStackProps extends cdk.StackProps {
   readonly environmentName: string;
   readonly orderEventBus: events.EventBus;
   readonly projectName: string;
+  readonly userPoolClientId: string;
+  readonly userPoolIssuer: string;
+  readonly webApplicationUrls: string[];
 }
 
 const findRepositoryRoot = (startPath: string): string => {
@@ -41,6 +47,7 @@ export class InventoryStack extends cdk.Stack {
     const resourcePrefix = props.projectName.toLowerCase();
     const consumerFunctionName = `${resourcePrefix}-inventory-consumer-${props.environmentName}`;
     const outcomeRelayFunctionName = `${resourcePrefix}-inventory-outcome-relay-${props.environmentName}`;
+    const apiFunctionName = `${resourcePrefix}-inventory-api-${props.environmentName}`;
 
     cdk.Tags.of(this).add('Project', props.projectName);
     cdk.Tags.of(this).add('Module', 'COMP60010');
@@ -277,6 +284,77 @@ export class InventoryStack extends cdk.Stack {
     });
     orderCreatedRule.addTarget(new eventTargets.SqsQueue(inventoryQueue));
 
+    const inventoryApiFunction = new nodejs.NodejsFunction(this, 'InventoryApiFunction', {
+      functionName: apiFunctionName,
+      description: 'SmartRetailX Inventory HTTP API',
+      entry: join(repositoryRoot, 'services', 'inventory-service', 'src', 'adapters', 'http', 'inventory-api-handler.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(10),
+      environment: {
+        INVENTORY_TABLE_NAME: inventoryTable.tableName,
+      },
+      projectRoot: repositoryRoot,
+      depsLockFilePath: join(repositoryRoot, 'package-lock.json'),
+      bundling: {
+        bundleAwsSDK: true,
+        minify: false,
+        sourceMap: true,
+        target: 'node22',
+      },
+    });
+
+    inventoryApiFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+        resources: [inventoryTable.tableArn],
+      })
+    );
+
+    const inventoryIntegration = new integrations.HttpLambdaIntegration(
+      'InventoryIntegration',
+      inventoryApiFunction,
+      {
+        payloadFormatVersion: apigatewayv2.PayloadFormatVersion.VERSION_2_0,
+      }
+    );
+
+    const inventoryApi = new apigatewayv2.HttpApi(this, 'InventoryApi', {
+      apiName: `${apiFunctionName}-http-api`,
+      description: 'SmartRetailX Inventory HTTP API',
+      corsPreflight: {
+        allowOrigins: props.webApplicationUrls,
+        allowHeaders: ['Content-Type', 'Authorization'],
+        allowMethods: [
+          apigatewayv2.CorsHttpMethod.GET,
+          apigatewayv2.CorsHttpMethod.POST,
+          apigatewayv2.CorsHttpMethod.PATCH,
+          apigatewayv2.CorsHttpMethod.OPTIONS,
+        ],
+      },
+    });
+
+    const inventoryAuthorizer = new HttpJwtAuthorizer(
+      'InventoryJwtAuthorizer',
+      props.userPoolIssuer,
+      {
+        authorizerName: `${apiFunctionName}-jwt-authorizer`,
+        jwtAudience: [props.userPoolClientId],
+      }
+    );
+
+    inventoryApi.addRoutes({
+      path: '/api/v1/inventory/{productId}',
+      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.PATCH],
+      integration: inventoryIntegration,
+      authorizer: inventoryAuthorizer,
+      authorizationScopes: ['openid'],
+    });
+
+    new cdk.CfnOutput(this, 'InventoryApiUrl', {
+      value: inventoryApi.apiEndpoint,
+    });
     new cdk.CfnOutput(this, 'InventoryTableName', {
       value: inventoryTable.tableName,
     });

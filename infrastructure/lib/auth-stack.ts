@@ -2,6 +2,15 @@ import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import type { Construct } from 'constructs';
 import type { WebAuthenticationConfiguration } from './environment-configuration.js';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpJwtAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
+import * as integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 
 export interface AuthStackProps extends cdk.StackProps {
   readonly environmentName: string;
@@ -9,6 +18,20 @@ export interface AuthStackProps extends cdk.StackProps {
   readonly webAuthentication: WebAuthenticationConfiguration;
   readonly cloudFrontDomain: string;
 }
+
+const findRepositoryRoot = (startPath: string): string => {
+  let currentPath = startPath;
+
+  while (!existsSync(join(currentPath, 'package-lock.json'))) {
+    const parentPath = dirname(currentPath);
+    if (parentPath === currentPath) {
+      throw new Error('Unable to find the repository root package-lock.json.');
+    }
+    currentPath = parentPath;
+  }
+
+  return currentPath;
+};
 
 export class AuthStack extends cdk.Stack {
   public readonly issuer: string;
@@ -20,6 +43,7 @@ export class AuthStack extends cdk.Stack {
   public constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, props);
 
+    const repositoryRoot = findRepositoryRoot(dirname(fileURLToPath(import.meta.url)));
     const resourcePrefix = props.projectName.toLowerCase();
 
     cdk.Tags.of(this).add('Project', props.projectName);
@@ -201,6 +225,83 @@ export class AuthStack extends cdk.Stack {
         props.webAuthentication.callbackUrl,
         `https://${props.cloudFrontDomain}/auth/callback`,
       ].join(','),
+    });
+
+    const adminApiFunction = new nodejs.NodejsFunction(this, 'AdminApiFunction', {
+      functionName: `${resourcePrefix}-admin-api-${props.environmentName}`,
+      description: 'SmartRetailX Admin Users HTTP API',
+      entry: join(repositoryRoot, 'services', 'auth-service', 'src', 'admin-handler.ts'),
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(10),
+      environment: {
+        USER_POOL_ID: userPool.userPoolId,
+      },
+      projectRoot: repositoryRoot,
+      depsLockFilePath: join(repositoryRoot, 'package-lock.json'),
+      bundling: {
+        bundleAwsSDK: true,
+        minify: false,
+        sourceMap: true,
+        target: 'node22',
+      },
+    });
+
+    adminApiFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['cognito-idp:ListUsers', 'cognito-idp:AdminDisableUser', 'cognito-idp:AdminUpdateUserAttributes'],
+        resources: [userPool.userPoolArn],
+      })
+    );
+
+    const adminIntegration = new integrations.HttpLambdaIntegration(
+      'AdminIntegration',
+      adminApiFunction,
+      { payloadFormatVersion: apigatewayv2.PayloadFormatVersion.VERSION_2_0 }
+    );
+
+    const adminApi = new apigatewayv2.HttpApi(this, 'AdminApi', {
+      apiName: `${resourcePrefix}-admin-api`,
+      description: 'SmartRetailX Admin HTTP API',
+      corsPreflight: {
+        allowOrigins: [props.webAuthentication.applicationUrl, `https://${props.cloudFrontDomain}`],
+        allowHeaders: ['Content-Type', 'Authorization'],
+        allowMethods: [
+          apigatewayv2.CorsHttpMethod.GET,
+          apigatewayv2.CorsHttpMethod.PATCH,
+          apigatewayv2.CorsHttpMethod.OPTIONS,
+        ],
+      },
+    });
+
+    const adminAuthorizer = new HttpJwtAuthorizer(
+      'AdminJwtAuthorizer',
+      this.issuer,
+      {
+        authorizerName: `${resourcePrefix}-admin-jwt-authorizer`,
+        jwtAudience: [userPoolClient.userPoolClientId],
+      }
+    );
+
+    adminApi.addRoutes({
+      path: '/api/v1/users',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: adminIntegration,
+      authorizer: adminAuthorizer,
+      authorizationScopes: ['openid'],
+    });
+
+    adminApi.addRoutes({
+      path: '/api/v1/users/{username}',
+      methods: [apigatewayv2.HttpMethod.PATCH],
+      integration: adminIntegration,
+      authorizer: adminAuthorizer,
+      authorizationScopes: ['openid'],
+    });
+
+    new cdk.CfnOutput(this, 'AdminApiUrl', {
+      value: adminApi.apiEndpoint,
     });
   }
 }

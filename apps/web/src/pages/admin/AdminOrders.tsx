@@ -20,10 +20,7 @@ export const AdminOrders: React.FC = () => {
         Loading all orders...
       </div>
     );
-  if (error)
-    return (
-      <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>
-    );
+  if (error) return <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>;
 
   const statusStyle = (status: string) => {
     switch (status) {
@@ -37,27 +34,37 @@ export const AdminOrders: React.FC = () => {
   };
 
   return (
-    <div className="bg-white">
+    <div className="bg-white border border-gray-200">
       {/* Page Header */}
       <div className="border-b border-gray-200 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">All Orders</h1>
-          <p className="text-sm text-gray-500 mt-2">
+        <div className="px-8 py-6">
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">All Orders</h1>
+          <p className="text-sm text-gray-500 mt-1">
             {orders.length} {orders.length === 1 ? 'order' : 'orders'}
           </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="p-0">
         <div className="border border-gray-200 overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Order ID</th>
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Customer ID</th>
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Total</th>
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Order ID
+                </th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Customer ID
+                </th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Status
+                </th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Total
+                </th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Date
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

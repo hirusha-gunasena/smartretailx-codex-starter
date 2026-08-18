@@ -107,7 +107,9 @@ export const OrderDetail: React.FC = () => {
                 #{order.orderId}
               </p>
             </div>
-            <div className={`flex items-center px-3 py-1.5 text-xs font-semibold uppercase tracking-wider ${config.style}`}>
+            <div
+              className={`flex items-center px-3 py-1.5 text-xs font-semibold uppercase tracking-wider ${config.style}`}
+            >
               {config.icon}
               {order.status}
             </div>

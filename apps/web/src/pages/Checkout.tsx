@@ -74,9 +74,7 @@ export const Checkout: React.FC = () => {
             </div>
             <div className="flex justify-between items-center mb-3 text-sm">
               <span className="text-gray-500">Shipping</span>
-              <span className="font-semibold text-gray-900">
-                {total >= 150 ? 'Free' : '$9.99'}
-              </span>
+              <span className="font-semibold text-gray-900">{total >= 150 ? 'Free' : '$9.99'}</span>
             </div>
             <div className="border-t border-gray-200 mt-4 pt-4 flex justify-between items-center">
               <span className="font-bold text-gray-900">Total</span>

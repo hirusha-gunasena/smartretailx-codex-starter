@@ -22,10 +22,7 @@ export const MyOrders: React.FC = () => {
         Loading orders...
       </div>
     );
-  if (error)
-    return (
-      <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>
-    );
+  if (error) return <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>;
   if (orders.length === 0)
     return (
       <div className="bg-white">
@@ -97,7 +94,10 @@ export const MyOrders: React.FC = () => {
                   >
                     {order.status}
                   </span>
-                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-900 transition-colors" strokeWidth={1.5} />
+                  <ArrowRight
+                    className="w-4 h-4 text-gray-400 group-hover:text-gray-900 transition-colors"
+                    strokeWidth={1.5}
+                  />
                 </div>
               </div>
             </Link>

@@ -97,6 +97,16 @@ describe('CognitoOrderCallerAuthenticator', () => {
   test.each([
     ['missing groups', undefined],
     ['empty groups', []],
+  ])('defaults %s to customer role', async (_description, groups) => {
+    verify.mockResolvedValue(accessClaims({ 'cognito:groups': groups }));
+
+    await expect(authenticator.authenticate('Bearer synthetic-test-token')).resolves.toEqual({
+      subject: 'opaque-cognito-subject',
+      role: 'customer',
+    });
+  });
+
+  test.each([
     ['unknown group', ['operator']],
     ['customer and admin ambiguity', ['customer', 'admin']],
     ['known and unknown group', ['customer', 'operator']],

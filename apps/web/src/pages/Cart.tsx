@@ -23,9 +23,7 @@ export const Cart: React.FC = () => {
       <div className="bg-white">
         <div className="max-w-7xl mx-auto px-6 py-24 text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Your bag is empty</h2>
-          <p className="text-gray-500 text-sm mb-8">
-            Looks like you haven't added anything yet.
-          </p>
+          <p className="text-gray-500 text-sm mb-8">Looks like you haven't added anything yet.</p>
           <Link
             to="/products"
             className="inline-block bg-black text-white px-8 py-3 text-xs font-semibold uppercase tracking-widest hover:bg-gray-800 transition-colors"
