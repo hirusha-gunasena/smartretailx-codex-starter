@@ -47,7 +47,6 @@ export const OrderDetail: React.FC = () => {
       } catch (err: unknown) {
         const error = err as Error;
         if (!order) {
-          // Only set error if we don't have initial data
           setError(error.message || 'Failed to fetch order');
           setLoading(false);
         }
@@ -59,81 +58,111 @@ export const OrderDetail: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [orderId]);
 
-  if (loading) return <div className="text-center py-12">Loading order details...</div>;
+  if (loading)
+    return (
+      <div className="text-center py-20 text-sm uppercase tracking-wider text-gray-400">
+        Loading order details...
+      </div>
+    );
   if (error || !order)
     return (
-      <div className="text-center text-red-600 py-12">Error: {error || 'Order not found'}</div>
+      <div className="text-center text-red-600 py-20 text-sm">
+        Error: {error || 'Order not found'}
+      </div>
     );
 
+  const statusConfig = {
+    PENDING: {
+      icon: <Clock className="w-4 h-4 mr-2 animate-pulse" strokeWidth={1.5} />,
+      style: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
+    },
+    CONFIRMED: {
+      icon: <CheckCircle className="w-4 h-4 mr-2" strokeWidth={1.5} />,
+      style: 'bg-green-50 text-green-700 border border-green-200',
+    },
+    REJECTED: {
+      icon: <XCircle className="w-4 h-4 mr-2" strokeWidth={1.5} />,
+      style: 'bg-red-50 text-red-700 border border-red-200',
+    },
+  };
+
+  const config = statusConfig[order.status as keyof typeof statusConfig] || statusConfig.PENDING;
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <Link to="/orders" className="flex items-center text-gray-500 hover:text-gray-900 mb-6 w-max">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Back to Orders
-      </Link>
+    <div className="bg-white">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <Link
+          to="/orders"
+          className="flex items-center text-gray-500 hover:text-gray-900 text-xs uppercase tracking-wider font-semibold mb-8 transition-colors w-max"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" strokeWidth={1.5} /> Back to Orders
+        </Link>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">Order Details</h1>
-            <p className="text-sm text-gray-500 font-mono">{order.orderId}</p>
+        <div className="border border-gray-200">
+          {/* Order Header */}
+          <div className="p-8 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Order Details</h1>
+              <p className="text-xs text-gray-400 font-mono mt-1 uppercase tracking-wider">
+                #{order.orderId}
+              </p>
+            </div>
+            <div className={`flex items-center px-3 py-1.5 text-xs font-semibold uppercase tracking-wider ${config.style}`}>
+              {config.icon}
+              {order.status}
+            </div>
           </div>
 
-          <div
-            className={`flex items-center px-4 py-2 rounded-lg ${
-              order.status === 'CONFIRMED'
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : order.status === 'REJECTED'
-                  ? 'bg-red-50 text-red-700 border border-red-200'
-                  : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-            }`}
-          >
-            {order.status === 'PENDING' && <Clock className="w-5 h-5 mr-2 animate-pulse" />}
-            {order.status === 'CONFIRMED' && <CheckCircle className="w-5 h-5 mr-2" />}
-            {order.status === 'REJECTED' && <XCircle className="w-5 h-5 mr-2" />}
-            <span className="font-semibold">{order.status}</span>
-          </div>
-        </div>
+          {/* Rejection Reason */}
+          {order.status === 'REJECTED' && order.rejectionReason && (
+            <div className="mx-8 mt-6 bg-red-50 border border-red-200 text-red-700 p-4 text-sm">
+              <strong>Reason for rejection:</strong> {order.rejectionReason}
+            </div>
+          )}
 
-        {order.status === 'REJECTED' && order.rejectionReason && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-6">
-            <strong>Reason for rejection:</strong> {order.rejectionReason}
-          </div>
-        )}
-
-        <div className="border-t pt-6">
-          <h2 className="text-lg font-semibold mb-4">Items</h2>
-          <ul className="divide-y divide-gray-100">
-            {order.items.map((item, idx) => {
-              const prod = products[item.productId];
-              return (
-                <li key={idx} className="py-3 flex justify-between items-center">
-                  <div className="flex items-center">
-                    {prod?.imageUrl && (
-                      <img
-                        src={prod.imageUrl}
-                        alt={prod.name}
-                        className="w-12 h-12 object-cover rounded mr-4 border"
-                      />
-                    )}
-                    <div>
-                      <p className="font-medium">{prod?.name || 'Unknown Product'}</p>
-                      <p className="text-sm text-gray-500">
-                        Qty: {item.quantity} × ${item.unitPrice.toFixed(2)}
-                      </p>
+          {/* Items */}
+          <div className="p-8 border-b border-gray-200">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-6">
+              Items
+            </h2>
+            <ul className="divide-y divide-gray-100">
+              {order.items.map((item, idx) => {
+                const prod = products[item.productId];
+                return (
+                  <li key={idx} className="py-4 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      {prod?.imageUrl && (
+                        <img
+                          src={prod.imageUrl}
+                          alt={prod.name}
+                          className="w-14 h-14 object-cover border border-gray-200"
+                        />
+                      )}
+                      <div>
+                        <p className="font-semibold text-sm text-gray-900">
+                          {prod?.name || 'Unknown Product'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Qty: {item.quantity} × ${item.unitPrice.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <p className="font-medium">${(item.unitPrice * item.quantity).toFixed(2)}</p>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                    <p className="font-semibold text-sm text-gray-900">
+                      ${(item.unitPrice * item.quantity).toFixed(2)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
-        <div className="flex justify-between items-center pt-6 border-t mt-4">
-          <span className="font-bold text-lg">Total</span>
-          <span className="font-bold text-xl text-indigo-600">
-            ${order.totalAmount.toFixed(2)} {order.currency}
-          </span>
+          {/* Total */}
+          <div className="p-8 bg-gray-50 flex justify-between items-center">
+            <span className="font-bold text-gray-900">Total</span>
+            <span className="font-bold text-lg text-gray-900">
+              ${order.totalAmount.toFixed(2)} {order.currency}
+            </span>
+          </div>
         </div>
       </div>
     </div>

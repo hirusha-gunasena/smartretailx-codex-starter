@@ -98,6 +98,86 @@ export class AuthStack extends cdk.Stack {
       },
     });
 
+    // Minimalist e-commerce UI customization for Cognito Hosted UI
+    // Matches the SmartRetailX design system: black/white/gray, no rounded corners, clean typography
+    new cognito.CfnUserPoolUICustomizationAttachment(this, 'UserPoolUICustomization', {
+      clientId: userPoolClient.userPoolClientId,
+      userPoolId: userPool.userPoolId,
+      css: `
+        .background-customizable {
+          background-color: #ffffff;
+        }
+        .banner-customizable {
+          padding: 25px 0px 25px 0px;
+          background-color: #000000;
+        }
+        .logo-customizable {
+          max-width: 200px;
+          max-height: 60px;
+        }
+        .submitButton-customizable {
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          margin: 20px 0px 10px 0px;
+          height: 48px;
+          width: 100%;
+          color: #ffffff;
+          background-color: #000000;
+          border-radius: 0px;
+          border: none;
+        }
+        .submitButton-customizable:hover {
+          background-color: #1f2937;
+          cursor: pointer;
+        }
+        .inputField-customizable {
+          border: 1px solid #e5e7eb;
+          border-radius: 0px;
+          padding: 12px;
+          font-size: 14px;
+          color: #111827;
+        }
+        .inputField-customizable:focus {
+          border-color: #000000;
+          outline: none;
+          box-shadow: 0 0 0 1px #000000;
+        }
+        .label-customizable {
+          font-weight: 600;
+          font-size: 12px;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          color: #6b7280;
+        }
+        .textDescription-customizable {
+          color: #6b7280;
+          font-size: 14px;
+        }
+        .legalText-customizable {
+          color: #9ca3af;
+          font-size: 12px;
+        }
+        .idpButton-customizable {
+          border: 1px solid #e5e7eb;
+          border-radius: 0px;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          color: #111827;
+          background-color: #ffffff;
+          height: 48px;
+        }
+        .redirect-customizable {
+          color: #111827;
+          font-size: 13px;
+          font-weight: 600;
+        }
+      `.trim(),
+    });
+
     this.userPool = userPool;
     this.userPoolClient = userPoolClient;
     this.userPoolId = userPool.userPoolId;

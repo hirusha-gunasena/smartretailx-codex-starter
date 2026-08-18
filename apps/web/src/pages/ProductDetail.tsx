@@ -21,46 +21,69 @@ export const ProductDetail: React.FC = () => {
       .finally(() => setLoading(false));
   }, [productId]);
 
-  if (loading) return <div className="text-center py-12">Loading...</div>;
+  if (loading)
+    return (
+      <div className="text-center py-20 text-sm uppercase tracking-wider text-gray-400">
+        Loading...
+      </div>
+    );
   if (error || !product)
     return (
-      <div className="text-center text-red-600 py-12">Error: {error || 'Product not found'}</div>
+      <div className="text-center text-red-600 py-20 text-sm">
+        Error: {error || 'Product not found'}
+      </div>
     );
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center text-gray-500 hover:text-gray-900 mb-6"
-      >
-        <ArrowLeft className="w-4 h-4 mr-1" /> Back
-      </button>
+    <div className="bg-white">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-gray-500 hover:text-gray-900 text-xs uppercase tracking-wider font-semibold mb-8 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" strokeWidth={1.5} /> Back
+        </button>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden md:flex">
-        <div className="md:w-1/2 h-64 md:h-auto bg-gray-100 flex items-center justify-center">
-          {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-gray-400">No image available</span>
-          )}
-        </div>
-        <div className="p-8 md:w-1/2 flex flex-col">
-          <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-          <p className="text-2xl font-semibold text-indigo-600 mt-4">
-            ${product.price.toFixed(2)} {product.currency}
-          </p>
-
-          <div className="mt-6 prose text-gray-600 flex-1">
-            <p>{product.description || 'No description available for this product.'}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          {/* Product Image */}
+          <div className="aspect-square bg-gray-100 border border-gray-200 overflow-hidden">
+            {product.imageUrl ? (
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="h-full w-full flex items-center justify-center">
+                <span className="text-gray-300 text-xs font-mono">No image available</span>
+              </div>
+            )}
           </div>
 
-          <div className="mt-8">
-            <button
-              onClick={() => addToCart(product)}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 font-medium text-lg transition-colors shadow-sm"
-            >
-              Add to Cart
-            </button>
+          {/* Product Info */}
+          <div className="flex flex-col justify-center">
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">{product.name}</h1>
+            <p className="text-2xl font-semibold text-gray-900 mt-4">
+              ${product.price.toFixed(2)} {product.currency}
+            </p>
+
+            <div className="border-t border-gray-200 mt-8 pt-8">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+                Description
+              </h2>
+              <p className="text-gray-600 leading-relaxed">
+                {product.description || 'No description available for this product.'}
+              </p>
+            </div>
+
+            <div className="mt-10">
+              <button
+                onClick={() => addToCart(product)}
+                className="w-full bg-black text-white py-4 text-sm font-semibold uppercase tracking-widest hover:bg-gray-800 transition-colors"
+              >
+                Add to Bag
+              </button>
+            </div>
           </div>
         </div>
       </div>

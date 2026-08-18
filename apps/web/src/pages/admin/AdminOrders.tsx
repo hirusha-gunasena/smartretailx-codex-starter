@@ -8,65 +8,85 @@ export const AdminOrders: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Note: getOrders() here typically fetches ALL orders if the backend allows admin full scan,
-    // or we might need a dedicated admin API endpoint. Assuming it returns all orders for admins.
     getOrders()
       .then(setOrders)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="p-8 text-center">Loading all orders...</div>;
-  if (error) return <div className="p-8 text-center text-red-600">Error: {error}</div>;
+  if (loading)
+    return (
+      <div className="text-center py-20 text-sm uppercase tracking-wider text-gray-400">
+        Loading all orders...
+      </div>
+    );
+  if (error)
+    return (
+      <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>
+    );
+
+  const statusStyle = (status: string) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return 'bg-green-50 text-green-700 border border-green-200';
+      case 'REJECTED':
+        return 'bg-red-50 text-red-700 border border-red-200';
+      default:
+        return 'bg-yellow-50 text-yellow-700 border border-yellow-200';
+    }
+  };
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Admin: All Orders</h1>
+    <div className="bg-white">
+      {/* Page Header */}
+      <div className="border-b border-gray-200 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">All Orders</h1>
+          <p className="text-sm text-gray-500 mt-2">
+            {orders.length} {orders.length === 1 ? 'order' : 'orders'}
+          </p>
+        </div>
+      </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="p-4 font-medium text-gray-600">Order ID</th>
-              <th className="p-4 font-medium text-gray-600">Customer ID</th>
-              <th className="p-4 font-medium text-gray-600">Status</th>
-              <th className="p-4 font-medium text-gray-600">Total</th>
-              <th className="p-4 font-medium text-gray-600">Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.orderId} className="border-b hover:bg-gray-50">
-                <td className="p-4 text-sm font-mono text-gray-500">
-                  {order.orderId.substring(0, 8)}...
-                </td>
-                <td className="p-4 text-sm font-mono text-gray-500">
-                  {order.customerId.substring(0, 8)}...
-                </td>
-                <td className="p-4">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold
-                    ${
-                      order.status === 'CONFIRMED'
-                        ? 'bg-green-100 text-green-800'
-                        : order.status === 'REJECTED'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </td>
-                <td className="p-4 font-medium">
-                  ${order.totalAmount.toFixed(2)} {order.currency}
-                </td>
-                <td className="p-4 text-sm text-gray-500">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </td>
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="border border-gray-200 overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Order ID</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Customer ID</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Total</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Date</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {orders.map((order) => (
+                <tr key={order.orderId} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4 text-xs font-mono text-gray-400">
+                    {order.orderId.substring(0, 8)}...
+                  </td>
+                  <td className="p-4 text-xs font-mono text-gray-400">
+                    {order.customerId.substring(0, 8)}...
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`px-2.5 py-1 text-xs font-semibold uppercase tracking-wider ${statusStyle(order.status)}`}
+                    >
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="p-4 font-semibold text-sm text-gray-900">
+                    ${order.totalAmount.toFixed(2)} {order.currency}
+                  </td>
+                  <td className="p-4 text-sm text-gray-500">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

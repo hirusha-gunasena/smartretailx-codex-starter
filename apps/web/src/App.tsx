@@ -4,6 +4,10 @@ import { Layout } from './components/Layout';
 import { useSession } from './auth/AuthProvider';
 
 // Pages
+import { Home } from './pages/Home';
+import { About } from './pages/About';
+import { Contact } from './pages/Contact';
+import { FAQ } from './pages/FAQ';
 import { Catalogue } from './pages/Catalogue';
 import { ProductDetail } from './pages/ProductDetail';
 import { Cart } from './pages/Cart';
@@ -36,7 +40,14 @@ const App: React.FC = () => {
     <Routes>
       <Route element={<Layout />}>
         {/* Public Routes */}
-        <Route path="/" element={<Navigate to="/products" replace />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/faq" element={<FAQ />} />
+        <Route
+          path="/auth/callback"
+          element={<div className="p-8 text-center text-gray-500">Completing sign in...</div>}
+        />
         <Route path="/products" element={<Catalogue />} />
         <Route path="/products/:productId" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />

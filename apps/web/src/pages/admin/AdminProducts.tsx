@@ -12,49 +12,64 @@ export const AdminProducts: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="p-8 text-center">Loading products...</div>;
+  if (loading)
+    return (
+      <div className="text-center py-20 text-sm uppercase tracking-wider text-gray-400">
+        Loading products...
+      </div>
+    );
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Admin: Manage Products</h1>
-        <button className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700">
-          Add New Product
-        </button>
+    <div className="bg-white">
+      {/* Page Header */}
+      <div className="border-b border-gray-200 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 py-12 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Manage Products</h1>
+            <p className="text-sm text-gray-500 mt-2">
+              {products.length} {products.length === 1 ? 'product' : 'products'}
+            </p>
+          </div>
+          <button className="bg-black text-white px-6 py-2.5 text-xs font-semibold uppercase tracking-widest hover:bg-gray-800 transition-colors">
+            Add Product
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="p-4 font-medium text-gray-600">ID</th>
-              <th className="p-4 font-medium text-gray-600">Name</th>
-              <th className="p-4 font-medium text-gray-600">Price</th>
-              <th className="p-4 font-medium text-gray-600">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.productId} className="border-b hover:bg-gray-50">
-                <td className="p-4 text-sm font-mono text-gray-500">
-                  {product.productId.substring(0, 8)}...
-                </td>
-                <td className="p-4 font-medium">{product.name}</td>
-                <td className="p-4">
-                  ${product.price.toFixed(2)} {product.currency}
-                </td>
-                <td className="p-4">
-                  <button className="text-indigo-600 hover:text-indigo-900 mr-3 text-sm font-medium">
-                    Edit
-                  </button>
-                  <button className="text-red-600 hover:text-red-900 text-sm font-medium">
-                    Delete
-                  </button>
-                </td>
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="border border-gray-200 overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">ID</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Price</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {products.map((product) => (
+                <tr key={product.productId} className="hover:bg-gray-50 transition-colors">
+                  <td className="p-4 text-xs font-mono text-gray-400">
+                    {product.productId.substring(0, 8)}...
+                  </td>
+                  <td className="p-4 font-semibold text-sm text-gray-900">{product.name}</td>
+                  <td className="p-4 text-sm text-gray-900">
+                    ${product.price.toFixed(2)} {product.currency}
+                  </td>
+                  <td className="p-4">
+                    <button className="text-gray-900 hover:underline mr-4 text-xs font-semibold uppercase tracking-wider">
+                      Edit
+                    </button>
+                    <button className="text-red-600 hover:underline text-xs font-semibold uppercase tracking-wider">
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
