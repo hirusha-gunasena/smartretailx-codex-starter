@@ -230,7 +230,7 @@ export class AuthStack extends cdk.Stack {
     const adminApiFunction = new nodejs.NodejsFunction(this, 'AdminApiFunction', {
       functionName: `${resourcePrefix}-admin-api-${props.environmentName}`,
       description: 'SmartRetailX Admin Users HTTP API',
-      entry: join(repositoryRoot, 'services', 'auth-service', 'src', 'admin-handler.ts'),
+      entry: join(repositoryRoot, 'domains', 'auth', 'service', 'src', 'admin-handler.ts'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,

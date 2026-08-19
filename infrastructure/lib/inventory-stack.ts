@@ -154,7 +154,7 @@ export class InventoryStack extends cdk.Stack {
     const inventoryConsumer = new nodejs.NodejsFunction(this, 'InventoryConsumerFunction', {
       functionName: consumerFunctionName,
       description: 'SmartRetailX Inventory Order Consumer',
-      entry: join(repositoryRoot, 'services', 'inventory-service', 'src', 'handler.ts'),
+      entry: join(repositoryRoot, 'domains', 'inventory', 'service', 'src', 'handler.ts'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
@@ -175,14 +175,14 @@ export class InventoryStack extends cdk.Stack {
         esbuildArgs: {
           '--alias:@smartretailx/api-contracts': join(
             repositoryRoot,
-            'packages',
+            'core',
             'api-contracts',
             'src',
             'index.ts',
           ),
           '--alias:@smartretailx/event-contracts': join(
             repositoryRoot,
-            'packages',
+            'core',
             'event-contracts',
             'src',
             'index.ts',
@@ -217,8 +217,9 @@ export class InventoryStack extends cdk.Stack {
       description: 'SmartRetailX Inventory Outcome Event Relay',
       entry: join(
         repositoryRoot,
-        'services',
-        'inventory-service',
+        'domains',
+        'inventory',
+        'service',
         'src',
         'inventory-outcome-relay.ts',
       ),
@@ -241,14 +242,14 @@ export class InventoryStack extends cdk.Stack {
         esbuildArgs: {
           '--alias:@smartretailx/api-contracts': join(
             repositoryRoot,
-            'packages',
+            'core',
             'api-contracts',
             'src',
             'index.ts',
           ),
           '--alias:@smartretailx/event-contracts': join(
             repositoryRoot,
-            'packages',
+            'core',
             'event-contracts',
             'src',
             'index.ts',
@@ -295,7 +296,7 @@ export class InventoryStack extends cdk.Stack {
     const inventoryApiFunction = new nodejs.NodejsFunction(this, 'InventoryApiFunction', {
       functionName: apiFunctionName,
       description: 'SmartRetailX Inventory HTTP API',
-      entry: join(repositoryRoot, 'services', 'inventory-service', 'src', 'adapters', 'http', 'inventory-api-handler.ts'),
+      entry: join(repositoryRoot, 'domains', 'inventory', 'service', 'src', 'adapters', 'http', 'inventory-api-handler.ts'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,

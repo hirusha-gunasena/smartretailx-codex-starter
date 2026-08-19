@@ -99,7 +99,7 @@ export class CatalogueStack extends cdk.Stack {
     const catalogueFunction = new nodejs.NodejsFunction(this, 'CatalogueFunction', {
       functionName,
       description: 'SmartRetailX Product Catalogue API',
-      entry: join(repositoryRoot, 'services', 'catalogue-service', 'src', 'handler.ts'),
+      entry: join(repositoryRoot, 'domains', 'catalogue', 'service', 'src', 'handler.ts'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
@@ -120,7 +120,7 @@ export class CatalogueStack extends cdk.Stack {
         esbuildArgs: {
           '--alias:@smartretailx/api-contracts': join(
             repositoryRoot,
-            'packages',
+            'core',
             'api-contracts',
             'src',
             'index.ts',

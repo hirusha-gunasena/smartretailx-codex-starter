@@ -114,7 +114,7 @@ export class OrderEventsStack extends cdk.Stack {
     const relayFunction = new nodejs.NodejsFunction(this, 'OrderEventRelayFunction', {
       functionName: relayFunctionName,
       description: 'SmartRetailX OrderCreated DynamoDB Stream Relay',
-      entry: join(repositoryRoot, 'services', 'order-service', 'src', 'order-event-relay.ts'),
+      entry: join(repositoryRoot, 'domains', 'order', 'service', 'src', 'order-event-relay.ts'),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
@@ -134,14 +134,14 @@ export class OrderEventsStack extends cdk.Stack {
         esbuildArgs: {
           '--alias:@smartretailx/api-contracts': join(
             repositoryRoot,
-            'packages',
+            'core',
             'api-contracts',
             'src',
             'index.ts',
           ),
           '--alias:@smartretailx/event-contracts': join(
             repositoryRoot,
-            'packages',
+            'core',
             'event-contracts',
             'src',
             'index.ts',

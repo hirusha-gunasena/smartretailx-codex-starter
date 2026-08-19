@@ -4,8 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "services/*",
-    "packages/*",
+    "domains/*/service",
+    "core/*",
     "infrastructure"
   ],
   "engines": {
