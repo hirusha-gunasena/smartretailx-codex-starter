@@ -1,5 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as cw_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import type { Construct } from 'constructs';
 import type { CatalogueStack } from './catalogue-stack.js';
 import type { InventoryStack } from './inventory-stack.js';
@@ -32,6 +34,12 @@ export class ObservabilityStack extends cdk.Stack {
       dashboardName,
       defaultInterval: cdk.Duration.hours(1),
     });
+
+    const alarmsTopic = new sns.Topic(this, 'SystemAlarmsTopic', {
+      displayName: `${projectName} ${environmentName} System Alarms`,
+    });
+    const alarmAction = new cw_actions.SnsAction(alarmsTopic);
+    const allAlarms: cloudwatch.IAlarm[] = [];
 
     // -----------------------------------------------------------
     // 1. SYSTEM OVERVIEW WIDGETS
@@ -68,9 +76,20 @@ export class ObservabilityStack extends cdk.Stack {
     // -----------------------------------------------------------
 
     const getLambdaMetrics = (fn: cdk.aws_lambda.IFunction, labelPrefix: string) => {
+      const errMetric = fn.metricErrors({ label: `${labelPrefix} Errs`, statistic: 'Sum' });
+      const alarm = errMetric.createAlarm(this, `${labelPrefix}ErrorsAlarm`, {
+        alarmName: `${projectName}-${environmentName}-${labelPrefix}-Errors`,
+        threshold: 1,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+      alarm.addAlarmAction(alarmAction);
+      allAlarms.push(alarm);
+
       return [
         fn.metricInvocations({ label: `${labelPrefix} Invs`, statistic: 'Sum' }),
-        fn.metricErrors({ label: `${labelPrefix} Errs`, statistic: 'Sum' }),
+        errMetric,
         fn.metricDuration({ label: `${labelPrefix} Dur`, statistic: 'Average' }),
       ];
     };
@@ -104,14 +123,32 @@ export class ObservabilityStack extends cdk.Stack {
     // 3. ECS FARGATE (ORDER SERVICE) METRICS
     // -----------------------------------------------------------
 
+    const ecsCpuMetric = props.orderServiceStack.orderService.metricCpuUtilization({ label: 'CPU Utilization' });
+    const ecsMemMetric = props.orderServiceStack.orderService.metricMemoryUtilization({ label: 'Memory Utilization' });
+
+    const ecsCpuAlarm = ecsCpuMetric.createAlarm(this, 'OrderServiceCpuAlarm', {
+      alarmName: `${projectName}-${environmentName}-OrderService-CPU`,
+      threshold: 80,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+    });
+    ecsCpuAlarm.addAlarmAction(alarmAction);
+    allAlarms.push(ecsCpuAlarm);
+
+    const ecsMemAlarm = ecsMemMetric.createAlarm(this, 'OrderServiceMemoryAlarm', {
+      alarmName: `${projectName}-${environmentName}-OrderService-Memory`,
+      threshold: 80,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+    });
+    ecsMemAlarm.addAlarmAction(alarmAction);
+    allAlarms.push(ecsMemAlarm);
+
     dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'Order Service ECS Utilization',
         width: 24,
-        left: [
-          props.orderServiceStack.orderService.metricCpuUtilization({ label: 'CPU Utilization' }),
-          props.orderServiceStack.orderService.metricMemoryUtilization({ label: 'Memory Utilization' }),
-        ],
+        left: [ecsCpuMetric, ecsMemMetric],
       }) as cloudwatch.IWidget,
     );
 
@@ -119,28 +156,53 @@ export class ObservabilityStack extends cdk.Stack {
     // 4. SQS QUEUE METRICS
     // -----------------------------------------------------------
 
+    const invQueueAgeMetric = props.inventoryStack.inventoryQueue.metricApproximateAgeOfOldestMessage({ label: 'Oldest Message Age (s)' });
+    const invQueueAlarm = invQueueAgeMetric.createAlarm(this, 'InventoryQueueAgeAlarm', {
+      alarmName: `${projectName}-${environmentName}-InventoryQueue-Age`,
+      threshold: 300,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+    });
+    invQueueAlarm.addAlarmAction(alarmAction);
+    allAlarms.push(invQueueAlarm);
+
+    const wfQueueAgeMetric = props.orderWorkflowStack.workflowQueue.metricApproximateAgeOfOldestMessage({ label: 'Oldest Message Age (s)' });
+    const wfQueueAlarm = wfQueueAgeMetric.createAlarm(this, 'WorkflowQueueAgeAlarm', {
+      alarmName: `${projectName}-${environmentName}-WorkflowQueue-Age`,
+      threshold: 300,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+    });
+    wfQueueAlarm.addAlarmAction(alarmAction);
+    allAlarms.push(wfQueueAlarm);
+
     dashboard.addWidgets(
       new cloudwatch.GraphWidget({
         title: 'Inventory Queue Backlog',
         width: 12,
-        left: [
-          props.inventoryStack.inventoryQueue.metricApproximateNumberOfMessagesVisible({ label: 'Visible Messages' }),
-        ],
-        right: [
-          props.inventoryStack.inventoryQueue.metricApproximateAgeOfOldestMessage({ label: 'Oldest Message Age (s)' }),
-        ],
+        left: [props.inventoryStack.inventoryQueue.metricApproximateNumberOfMessagesVisible({ label: 'Visible Messages' })],
+        right: [invQueueAgeMetric],
       }) as cloudwatch.IWidget,
       new cloudwatch.GraphWidget({
         title: 'Order Workflow Queue Backlog',
         width: 12,
-        left: [
-          props.orderWorkflowStack.workflowQueue.metricApproximateNumberOfMessagesVisible({ label: 'Visible Messages' }),
-        ],
-        right: [
-          props.orderWorkflowStack.workflowQueue.metricApproximateAgeOfOldestMessage({ label: 'Oldest Message Age (s)' }),
-        ],
+        left: [props.orderWorkflowStack.workflowQueue.metricApproximateNumberOfMessagesVisible({ label: 'Visible Messages' })],
+        right: [wfQueueAgeMetric],
       }) as cloudwatch.IWidget,
     );
+
+    // -----------------------------------------------------------
+    // 5. ALARM STATUS WIDGET
+    // -----------------------------------------------------------
+
+    const alarmWidget = new cloudwatch.AlarmStatusWidget({
+      alarms: allAlarms,
+      title: 'System Alarms Status',
+      width: 24,
+    });
+    
+    // Add to the top of the dashboard
+    dashboard.addWidgets(alarmWidget as cloudwatch.IWidget);
 
     new cdk.CfnOutput(this, 'DashboardName', {
       value: dashboardName,
