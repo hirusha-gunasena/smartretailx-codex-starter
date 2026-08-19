@@ -23,6 +23,9 @@ beforeAll(() => {
     projectName: 'SmartRetailX',
     environmentName: 'dev',
     orderEventBus: orderEventsStack.eventBus,
+    userPoolClientId: 'test-client-id',
+    userPoolIssuer: 'test-issuer',
+    webApplicationUrls: ['http://localhost:5173'],
   });
 
   orderEventsTemplate = Template.fromStack(orderEventsStack);
@@ -252,7 +255,7 @@ test('allows EventBridge to send only to the source queue from the routing rule'
 });
 
 test('creates the Node.js 22 Inventory consumer outside a VPC', () => {
-  inventoryTemplate.resourceCountIs('AWS::Lambda::Function', 2);
+  inventoryTemplate.resourceCountIs('AWS::Lambda::Function', 3);
   inventoryTemplate.hasResourceProperties('AWS::Lambda::Function', {
     Code: Match.objectLike({
       S3Bucket: Match.anyValue(),

@@ -79,6 +79,7 @@ const App: React.FC = () => {
         {/* Admin Routes with distinct layout */}
         <Route element={<PrivateRoute roles={['admin']} />}>
           <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<Navigate to="/admin/products" replace />} />
             <Route path="/admin/products" element={<AdminProducts />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/users" element={<AdminUsers />} />

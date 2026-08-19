@@ -93,11 +93,13 @@ export const createCatalogueHandler = (
           authorizationLogger,
         );
         
-        let body: any = {};
+        let body: { contentType?: string } = {};
         if (event.body) {
           try {
-            body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body);
-          } catch {}
+            body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body) as { contentType?: string };
+          } catch {
+            // ignore invalid JSON and fall back to default empty object
+          }
         }
         
         const contentType = body.contentType || 'image/jpeg';

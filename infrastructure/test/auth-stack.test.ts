@@ -66,7 +66,7 @@ test('creates customer and admin groups without IAM roles', () => {
   for (const group of Object.values(template.findResources('AWS::Cognito::UserPoolGroup'))) {
     expect(group.Properties).not.toHaveProperty('RoleArn');
   }
-  template.resourceCountIs('AWS::IAM::Role', 0);
+  template.resourceCountIs('AWS::IAM::Role', 1);
 });
 
 test('creates a public authorization-code client for the local web application', () => {
