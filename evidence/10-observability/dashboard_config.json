@@ -1,0 +1,214 @@
+{
+  "Fn::Join": [
+    "",
+    [
+      "{\"start\":\"-PT1H\",\"widgets\":[{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Total Lambda Errors\",\"region\":\"",
+      {
+        "Ref": "AWS::Region"
+      },
+      "\",\"metrics\":[[{\"label\":\"Errors\",\"expression\":\"SEARCH('{AWS/Lambda,FunctionName} FunctionName=\\\"smartretailx-\\\" MetricName=\\\"Errors\\\"', 'Sum', 300)\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":12,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Total Lambda Invocations\",\"region\":\"",
+      {
+        "Ref": "AWS::Region"
+      },
+      "\",\"metrics\":[[{\"label\":\"Invocations\",\"expression\":\"SEARCH('{AWS/Lambda,FunctionName} FunctionName=\\\"smartretailx-\\\" MetricName=\\\"Invocations\\\"', 'Sum', 300)\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":8,\"height\":6,\"x\":0,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Catalogue Service\",\"region\":\"",
+      {
+        "Ref": "AWS::Region"
+      },
+      "\",\"metrics\":[[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Catalogue:ExportsOutputRefCatalogueFunction701D9D68BC006F2A"
+      },
+      "\",{\"label\":\"Catalogue Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Catalogue:ExportsOutputRefCatalogueFunction701D9D68BC006F2A"
+      },
+      "\",{\"label\":\"Catalogue Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Catalogue:ExportsOutputRefCatalogueFunction701D9D68BC006F2A"
+      },
+      "\",{\"label\":\"Catalogue Dur\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":8,\"height\":6,\"x\":8,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Inventory Service\",\"region\":\"",
+      {
+        "Ref": "AWS::Region"
+      },
+      "\",\"metrics\":[[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D"
+      },
+      "\",{\"label\":\"InvAPI Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D"
+      },
+      "\",{\"label\":\"InvAPI Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D"
+      },
+      "\",{\"label\":\"InvAPI Dur\"}],[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryConsumerFunction64DA194838F83E12"
+      },
+      "\",{\"label\":\"InvCons Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryConsumerFunction64DA194838F83E12"
+      },
+      "\",{\"label\":\"InvCons Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryConsumerFunction64DA194838F83E12"
+      },
+      "\",{\"label\":\"InvCons Dur\"}],[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F"
+      },
+      "\",{\"label\":\"InvRelay Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F"
+      },
+      "\",{\"label\":\"InvRelay Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F"
+      },
+      "\",{\"label\":\"InvRelay Dur\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":8,\"height\":6,\"x\":16,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Order Events & Workflow\",\"region\":\"",
+      {
+        "Ref": "AWS::Region"
+      },
+      "\",\"metrics\":[[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventRelayFunctionED971BF271ECED47"
+      },
+      "\",{\"label\":\"OrdRelay Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventRelayFunctionED971BF271ECED47"
+      },
+      "\",{\"label\":\"OrdRelay Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventRelayFunctionED971BF271ECED47"
+      },
+      "\",{\"label\":\"OrdRelay Dur\"}],[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputRefOrderWorkflowFunctionFCE821D40A0897AA"
+      },
+      "\",{\"label\":\"OrdWork Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputRefOrderWorkflowFunctionFCE821D40A0897AA"
+      },
+      "\",{\"label\":\"OrdWork Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputRefOrderWorkflowFunctionFCE821D40A0897AA"
+      },
+      "\",{\"label\":\"OrdWork Dur\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":24,\"height\":6,\"x\":0,\"y\":12,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Order Service ECS Utilization\",\"region\":\"",
+      {
+        "Ref": "AWS::Region"
+      },
+      "\",\"metrics\":[[\"AWS/ECS\",\"CPUUtilization\",\"ClusterName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputRefOrderClusterB8E5F262A6757E5E"
+      },
+      "\",\"ServiceName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputFnGetAttOrderFargateServiceC016F029Name4A4B45F3"
+      },
+      "\",{\"label\":\"CPU Utilization\"}],[\"AWS/ECS\",\"MemoryUtilization\",\"ClusterName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputRefOrderClusterB8E5F262A6757E5E"
+      },
+      "\",\"ServiceName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputFnGetAttOrderFargateServiceC016F029Name4A4B45F3"
+      },
+      "\",{\"label\":\"Memory Utilization\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":18,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Inventory Queue Backlog\",\"region\":\"",
+      {
+        "Ref": "AWS::Region"
+      },
+      "\",\"metrics\":[[\"AWS/SQS\",\"ApproximateNumberOfMessagesVisible\",\"QueueName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputFnGetAttInventoryQueueB99B90CBQueueNameBE2BD1D3"
+      },
+      "\",{\"label\":\"Visible Messages\",\"stat\":\"Maximum\"}],[\"AWS/SQS\",\"ApproximateAgeOfOldestMessage\",\"QueueName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputFnGetAttInventoryQueueB99B90CBQueueNameBE2BD1D3"
+      },
+      "\",{\"label\":\"Oldest Message Age (s)\",\"stat\":\"Maximum\",\"yAxis\":\"right\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":12,\"y\":18,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Order Workflow Queue Backlog\",\"region\":\"",
+      {
+        "Ref": "AWS::Region"
+      },
+      "\",\"metrics\":[[\"AWS/SQS\",\"ApproximateNumberOfMessagesVisible\",\"QueueName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputFnGetAttOrderWorkflowQueue62B5DA5BQueueNameA793F5D2"
+      },
+      "\",{\"label\":\"Visible Messages\",\"stat\":\"Maximum\"}],[\"AWS/SQS\",\"ApproximateAgeOfOldestMessage\",\"QueueName\",\"",
+      {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputFnGetAttOrderWorkflowQueue62B5DA5BQueueNameA793F5D2"
+      },
+      "\",{\"label\":\"Oldest Message Age (s)\",\"stat\":\"Maximum\",\"yAxis\":\"right\"}]],\"yAxis\":{}}},{\"type\":\"alarm\",\"width\":24,\"height\":3,\"x\":0,\"y\":24,\"properties\":{\"title\":\"System Alarms Status\",\"alarms\":[\"",
+      {
+        "Fn::GetAtt": [
+          "CatalogueErrorsAlarm9483AA3A",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "InvAPIErrorsAlarm0EA8D9D7",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "InvConsErrorsAlarm1ACA54F8",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "InvRelayErrorsAlarmB1334559",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "OrdRelayErrorsAlarm787BC32D",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "OrdWorkErrorsAlarm89976364",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "OrderServiceCpuAlarm3695E431",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "OrderServiceMemoryAlarmF05CBB26",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "InventoryQueueAgeAlarm0E1DE8D6",
+          "Arn"
+        ]
+      },
+      "\",\"",
+      {
+        "Fn::GetAtt": [
+          "WorkflowQueueAgeAlarm9A08463A",
+          "Arn"
+        ]
+      },
+      "\"]}}]}"
+    ]
+  ]
+}

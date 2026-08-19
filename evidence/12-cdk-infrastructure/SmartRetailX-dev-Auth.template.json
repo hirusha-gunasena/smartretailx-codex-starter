@@ -1,0 +1,991 @@
+{
+ "Description": "SmartRetailX Cognito authentication and authorization foundation",
+ "Resources": {
+  "UserPool6BA7E5F2": {
+   "Type": "AWS::Cognito::UserPool",
+   "Properties": {
+    "AccountRecoverySetting": {
+     "RecoveryMechanisms": [
+      {
+       "Name": "verified_email",
+       "Priority": 1
+      }
+     ]
+    },
+    "AdminCreateUserConfig": {
+     "AllowAdminCreateUserOnly": false
+    },
+    "AutoVerifiedAttributes": [
+     "email"
+    ],
+    "DeletionProtection": "INACTIVE",
+    "EmailVerificationMessage": "The verification code to your new account is {####}",
+    "EmailVerificationSubject": "Verify your new account",
+    "EnabledMfas": [
+     "SOFTWARE_TOKEN_MFA"
+    ],
+    "MfaConfiguration": "OPTIONAL",
+    "Policies": {
+     "PasswordPolicy": {
+      "MinimumLength": 12,
+      "RequireLowercase": true,
+      "RequireNumbers": true,
+      "RequireSymbols": true,
+      "RequireUppercase": true
+     }
+    },
+    "Schema": [
+     {
+      "Mutable": true,
+      "Name": "email",
+      "Required": true
+     }
+    ],
+    "SmsVerificationMessage": "The verification code to your new account is {####}",
+    "UserPoolName": "smartretailx-users-dev",
+    "UserPoolTags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    },
+    "UsernameAttributes": [
+     "email"
+    ],
+    "VerificationMessageTemplate": {
+     "DefaultEmailOption": "CONFIRM_WITH_CODE",
+     "EmailMessage": "The verification code to your new account is {####}",
+     "EmailSubject": "Verify your new account",
+     "SmsMessage": "The verification code to your new account is {####}"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/UserPool/Resource"
+   }
+  },
+  "UserPoolWebUserPoolClient4FD9D895": {
+   "Type": "AWS::Cognito::UserPoolClient",
+   "Properties": {
+    "AccessTokenValidity": 60,
+    "AllowedOAuthFlows": [
+     "code"
+    ],
+    "AllowedOAuthFlowsUserPoolClient": true,
+    "AllowedOAuthScopes": [
+     "openid",
+     "email",
+     "profile"
+    ],
+    "CallbackURLs": [
+     "http://localhost:5173/auth/callback",
+     {
+      "Fn::Join": [
+       "",
+       [
+        "https://",
+        {
+         "Fn::ImportValue": "SmartRetailX-dev-Frontend:ExportsOutputFnGetAttFrontendDistributionE6EAF405DomainNameBCB0DC7A"
+        },
+        "/auth/callback"
+       ]
+      ]
+     }
+    ],
+    "ClientName": "smartretailx-web-dev",
+    "EnableTokenRevocation": true,
+    "GenerateSecret": false,
+    "IdTokenValidity": 60,
+    "LogoutURLs": [
+     "http://localhost:5173/",
+     {
+      "Fn::Join": [
+       "",
+       [
+        "https://",
+        {
+         "Fn::ImportValue": "SmartRetailX-dev-Frontend:ExportsOutputFnGetAttFrontendDistributionE6EAF405DomainNameBCB0DC7A"
+        },
+        "/"
+       ]
+      ]
+     }
+    ],
+    "PreventUserExistenceErrors": "ENABLED",
+    "RefreshTokenValidity": 10080,
+    "SupportedIdentityProviders": [
+     "COGNITO"
+    ],
+    "TokenValidityUnits": {
+     "AccessToken": "minutes",
+     "IdToken": "minutes",
+     "RefreshToken": "minutes"
+    },
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/UserPool/WebUserPoolClient/Resource"
+   }
+  },
+  "UserPoolCognitoDomainD6C7F9FA": {
+   "Type": "AWS::Cognito::UserPoolDomain",
+   "Properties": {
+    "Domain": {
+     "Fn::Join": [
+      "",
+      [
+       "smartretailx-dev-",
+       {
+        "Ref": "AWS::AccountId"
+       }
+      ]
+     ]
+    },
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/UserPool/CognitoDomain/Resource"
+   }
+  },
+  "AdminGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "Catalogue administrators with read and write access.",
+    "GroupName": "admin",
+    "Precedence": 0,
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminGroup"
+   }
+  },
+  "CustomerGroup": {
+   "Type": "AWS::Cognito::UserPoolGroup",
+   "Properties": {
+    "Description": "Catalogue customers with read-only access.",
+    "GroupName": "customer",
+    "Precedence": 10,
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/CustomerGroup"
+   }
+  },
+  "UserPoolUICustomization": {
+   "Type": "AWS::Cognito::UserPoolUICustomizationAttachment",
+   "Properties": {
+    "CSS": ".background-customizable {\n          background-color: #ffffff;\n        }\n        .banner-customizable {\n          padding: 25px 0px 25px 0px;\n          background-color: #000000;\n        }\n        .logo-customizable {\n          max-width: 200px;\n          max-height: 60px;\n        }\n        .submitButton-customizable {\n          font-size: 12px;\n          font-weight: 600;\n          letter-spacing: 0.1em;\n          text-transform: uppercase;\n          margin: 20px 0px 10px 0px;\n          height: 48px;\n          width: 100%;\n          color: #ffffff;\n          background-color: #000000;\n          border-radius: 0px;\n          border: none;\n        }\n        .submitButton-customizable:hover {\n          background-color: #1f2937;\n          cursor: pointer;\n        }\n        .inputField-customizable {\n          border: 1px solid #e5e7eb;\n          border-radius: 0px;\n          padding: 12px;\n          font-size: 14px;\n          color: #111827;\n        }\n        .inputField-customizable:focus {\n          border-color: #000000;\n          outline: none;\n          box-shadow: 0 0 0 1px #000000;\n        }\n        .label-customizable {\n          font-weight: 600;\n          font-size: 12px;\n          letter-spacing: 0.05em;\n          text-transform: uppercase;\n          color: #6b7280;\n        }\n        .textDescription-customizable {\n          color: #6b7280;\n          font-size: 14px;\n        }\n        .legalText-customizable {\n          color: #9ca3af;\n          font-size: 12px;\n        }\n        .idpButton-customizable {\n          border: 1px solid #e5e7eb;\n          border-radius: 0px;\n          font-size: 12px;\n          font-weight: 600;\n          letter-spacing: 0.05em;\n          text-transform: uppercase;\n          color: #111827;\n          background-color: #ffffff;\n          height: 48px;\n        }\n        .redirect-customizable {\n          color: #111827;\n          font-size: 13px;\n          font-weight: 600;\n        }",
+    "ClientId": {
+     "Ref": "UserPoolWebUserPoolClient4FD9D895"
+    },
+    "UserPoolId": {
+     "Ref": "UserPool6BA7E5F2"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/UserPoolUICustomization"
+   }
+  },
+  "AdminApiFunctionServiceRole8CB2DBB5": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApiFunction/ServiceRole/Resource"
+   }
+  },
+  "AdminApiFunctionServiceRoleDefaultPolicy1CFB0CA4": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "cognito-idp:ListUsers",
+        "cognito-idp:AdminDisableUser",
+        "cognito-idp:AdminUpdateUserAttributes"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "UserPool6BA7E5F2",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "AdminApiFunctionServiceRoleDefaultPolicy1CFB0CA4",
+    "Roles": [
+     {
+      "Ref": "AdminApiFunctionServiceRole8CB2DBB5"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApiFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "AdminApiFunction0560532A": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "2e1cffca0df3a6a0274f872fcde25e8a001aa20495eac26d0abfe91290c384d8.zip"
+    },
+    "Description": "SmartRetailX Admin Users HTTP API",
+    "Environment": {
+     "Variables": {
+      "USER_POOL_ID": {
+       "Ref": "UserPool6BA7E5F2"
+      }
+     }
+    },
+    "FunctionName": "smartretailx-admin-api-dev",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "AdminApiFunctionServiceRole8CB2DBB5",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "AdminApiFunctionServiceRoleDefaultPolicy1CFB0CA4",
+    "AdminApiFunctionServiceRole8CB2DBB5"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApiFunction/Resource",
+    "aws:asset:path": "asset.2e1cffca0df3a6a0274f872fcde25e8a001aa20495eac26d0abfe91290c384d8",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "AdminApi059A0912": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "CorsConfiguration": {
+     "AllowHeaders": [
+      "Content-Type",
+      "Authorization"
+     ],
+     "AllowMethods": [
+      "GET",
+      "PATCH",
+      "OPTIONS"
+     ],
+     "AllowOrigins": [
+      "http://localhost:5173",
+      {
+       "Fn::Join": [
+        "",
+        [
+         "https://",
+         {
+          "Fn::ImportValue": "SmartRetailX-dev-Frontend:ExportsOutputFnGetAttFrontendDistributionE6EAF405DomainNameBCB0DC7A"
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    "Description": "SmartRetailX Admin HTTP API",
+    "Name": "smartretailx-admin-api",
+    "ProtocolType": "HTTP",
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApi/Resource"
+   }
+  },
+  "AdminApiDefaultStage6D28495C": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "AdminApi059A0912"
+    },
+    "AutoDeploy": true,
+    "StageName": "$default",
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApi/DefaultStage/Resource"
+   }
+  },
+  "AdminApiGETapiv1usersAdminIntegration8C1B70F9": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "AdminApi059A0912"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::GetAtt": [
+      "AdminApiFunction0560532A",
+      "Arn"
+     ]
+    },
+    "PayloadFormatVersion": "2.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApi/GET--api--v1--users/AdminIntegration/Resource"
+   }
+  },
+  "AdminApiGETapiv1usersAdminIntegrationPermission26355136": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "AdminApiFunction0560532A",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "AdminApi059A0912"
+       },
+       "/*/*/api/v1/users"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApi/GET--api--v1--users/AdminIntegration-Permission"
+   }
+  },
+  "AdminApiGETapiv1usersD57A1227": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "AdminApi059A0912"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "AdminApiAdminJwtAuthorizer7A78DADF"
+    },
+    "RouteKey": "GET /api/v1/users",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "AdminApiGETapiv1usersAdminIntegration8C1B70F9"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApi/GET--api--v1--users/Resource"
+   }
+  },
+  "AdminApiAdminJwtAuthorizer7A78DADF": {
+   "Type": "AWS::ApiGatewayV2::Authorizer",
+   "Properties": {
+    "ApiId": {
+     "Ref": "AdminApi059A0912"
+    },
+    "AuthorizerType": "JWT",
+    "IdentitySource": [
+     "$request.header.Authorization"
+    ],
+    "JwtConfiguration": {
+     "Audience": [
+      {
+       "Ref": "UserPoolWebUserPoolClient4FD9D895"
+      }
+     ],
+     "Issuer": {
+      "Fn::GetAtt": [
+       "UserPool6BA7E5F2",
+       "ProviderURL"
+      ]
+     }
+    },
+    "Name": "smartretailx-admin-jwt-authorizer"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApi/AdminJwtAuthorizer/Resource"
+   }
+  },
+  "AdminApiPATCHapiv1usersusernameAdminIntegrationPermissionAF1BC61E": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "AdminApiFunction0560532A",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "AdminApi059A0912"
+       },
+       "/*/*/api/v1/users/{username}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApi/PATCH--api--v1--users--{username}/AdminIntegration-Permission"
+   }
+  },
+  "AdminApiPATCHapiv1usersusername74450916": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "AdminApi059A0912"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "AdminApiAdminJwtAuthorizer7A78DADF"
+    },
+    "RouteKey": "PATCH /api/v1/users/{username}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "AdminApiGETapiv1usersAdminIntegration8C1B70F9"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/AdminApi/PATCH--api--v1--users--{username}/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2VQTW/CMAz9LdxDxsq0e+m0jcuGQJyRCaEYmriKHRBU/e9TWmBoO70Pv7zEyXT2OtajAZx4aDaHYYVr3SwEzEHBiVeNodKjkG6WbMOMqFLF1t/5jRQVWi+Po6tzk2/kAP1j4L/zESjWj8ZyWkQWcngBQfK5CJids15aVYFbb2DlaWP3rL86eI/epJxCcLqZU2VTWYczqtCck+xZq3i8AmYrrPMEisd6Es3BygTYXut1U2z9vTUdtsEhM5JvFdRYgtgTnI+Zbj5F6rzGFEqQ5EKg7F7Qk2TNKUrPpl5sGeBW/Ef+5vIoOwp4saGrvqu2Tfo7Sh1FdRukW9CXrUp/ovf8dMwy/fyiR4M9Iw5D9ILO6nmPP/lWxRP3AQAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Auth/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "UserPoolId": {
+   "Value": {
+    "Ref": "UserPool6BA7E5F2"
+   }
+  },
+  "UserPoolClientId": {
+   "Value": {
+    "Ref": "UserPoolWebUserPoolClient4FD9D895"
+   }
+  },
+  "CognitoDomain": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "UserPoolCognitoDomainD6C7F9FA"
+      },
+      ".auth.",
+      {
+       "Ref": "AWS::Region"
+      },
+      ".amazoncognito.com"
+     ]
+    ]
+   }
+  },
+  "CognitoIssuer": {
+   "Value": {
+    "Fn::GetAtt": [
+     "UserPool6BA7E5F2",
+     "ProviderURL"
+    ]
+   }
+  },
+  "OAuthCallbackUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://localhost:5173/auth/callback,https://",
+      {
+       "Fn::ImportValue": "SmartRetailX-dev-Frontend:ExportsOutputFnGetAttFrontendDistributionE6EAF405DomainNameBCB0DC7A"
+      },
+      "/auth/callback"
+     ]
+    ]
+   }
+  },
+  "AdminApiUrl": {
+   "Value": {
+    "Fn::GetAtt": [
+     "AdminApi059A0912",
+     "ApiEndpoint"
+    ]
+   }
+  },
+  "ExportsOutputRefUserPoolWebUserPoolClient4FD9D8952A984FBB": {
+   "Value": {
+    "Ref": "UserPoolWebUserPoolClient4FD9D895"
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-Auth:ExportsOutputRefUserPoolWebUserPoolClient4FD9D8952A984FBB"
+   }
+  },
+  "ExportsOutputFnGetAttUserPool6BA7E5F2ProviderURL1DC61701": {
+   "Value": {
+    "Fn::GetAtt": [
+     "UserPool6BA7E5F2",
+     "ProviderURL"
+    ]
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-Auth:ExportsOutputFnGetAttUserPool6BA7E5F2ProviderURL1DC61701"
+   }
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,1399 @@
+{
+ "Description": "SmartRetailX Product Catalogue infrastructure",
+ "Resources": {
+  "ProductsTable241ADBFF": {
+   "Type": "AWS::DynamoDB::GlobalTable",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "productId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "productId",
+      "KeyType": "HASH"
+     }
+    ],
+    "Replicas": [
+     {
+      "DeletionProtectionEnabled": false,
+      "PointInTimeRecoverySpecification": {
+       "PointInTimeRecoveryEnabled": false
+      },
+      "Region": {
+       "Ref": "AWS::Region"
+      },
+      "TableClass": "STANDARD",
+      "Tags": [
+       {
+        "Key": "Environment",
+        "Value": "dev"
+       },
+       {
+        "Key": "ManagedBy",
+        "Value": "CDK"
+       },
+       {
+        "Key": "Module",
+        "Value": "COMP60010"
+       },
+       {
+        "Key": "Owner",
+        "Value": "SmartRetailX"
+       },
+       {
+        "Key": "Project",
+        "Value": "SmartRetailX"
+       }
+      ]
+     }
+    ],
+    "SSESpecification": {
+     "SSEEnabled": false
+    },
+    "TableName": "smartretailx-products-dev"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/ProductsTable/Resource"
+   }
+  },
+  "ProductImagesBucket03BDA4C8": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": {
+     "Fn::Join": [
+      "",
+      [
+       "smartretailx-images-dev-",
+       {
+        "Ref": "AWS::AccountId"
+       }
+      ]
+     ]
+    },
+    "CorsConfiguration": {
+     "CorsRules": [
+      {
+       "AllowedHeaders": [
+        "*"
+       ],
+       "AllowedMethods": [
+        "PUT"
+       ],
+       "AllowedOrigins": [
+        "http://localhost:5173",
+        {
+         "Fn::Join": [
+          "",
+          [
+           "https://",
+           {
+            "Fn::ImportValue": "SmartRetailX-dev-Frontend:ExportsOutputFnGetAttFrontendDistributionE6EAF405DomainNameBCB0DC7A"
+           }
+          ]
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": false,
+     "BlockPublicPolicy": false,
+     "IgnorePublicAcls": false,
+     "RestrictPublicBuckets": false
+    },
+    "Tags": [
+     {
+      "Key": "aws-cdk:auto-delete-objects",
+      "Value": "true"
+     },
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/ProductImagesBucket/Resource"
+   }
+  },
+  "ProductImagesBucketPolicyA2B0CBED": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "ProductImagesBucket03BDA4C8"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ProductImagesBucket03BDA4C8",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": [
+        "s3:PutBucketPolicy",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+          "Arn"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "ProductImagesBucket03BDA4C8",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "ProductImagesBucket03BDA4C8",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/ProductImagesBucket/Policy/Resource"
+   }
+  },
+  "ProductImagesBucketAutoDeleteObjectsCustomResourceB27E6F1C": {
+   "Type": "Custom::S3AutoDeleteObjects",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F",
+      "Arn"
+     ]
+    },
+    "BucketName": {
+     "Ref": "ProductImagesBucket03BDA4C8"
+    }
+   },
+   "DependsOn": [
+    "ProductImagesBucketPolicyA2B0CBED"
+   ],
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/ProductImagesBucket/AutoDeleteObjectsCustomResource/Default"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ]
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/Custom::S3AutoDeleteObjectsCustomResourceProvider/Role"
+   }
+  },
+  "CustomS3AutoDeleteObjectsCustomResourceProviderHandler9D90184F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6.zip"
+    },
+    "Timeout": 900,
+    "MemorySize": 128,
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs24.x",
+    "Description": {
+     "Fn::Join": [
+      "",
+      [
+       "Lambda function for auto-deleting objects in ",
+       {
+        "Ref": "ProductImagesBucket03BDA4C8"
+       },
+       " S3 bucket."
+      ]
+     ]
+    }
+   },
+   "DependsOn": [
+    "CustomS3AutoDeleteObjectsCustomResourceProviderRole3B1BD092"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/Custom::S3AutoDeleteObjectsCustomResourceProvider/Handler",
+    "aws:asset:path": "asset.faa95a81ae7d7373f3e1f242268f904eb748d8d0fdd306e8a6fe515a1905a7d6",
+    "aws:asset:property": "Code"
+   }
+  },
+  "CatalogueLogGroup1CE16BEB": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/smartretailx-catalogue-dev",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueLogGroup/Resource"
+   }
+  },
+  "CatalogueFunctionServiceRole02B9B854": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueFunction/ServiceRole/Resource"
+   }
+  },
+  "CatalogueFunctionServiceRoleDefaultPolicyE36FEB71": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "ProductsTable241ADBFF",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "ProductImagesBucket03BDA4C8",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "CatalogueFunctionServiceRoleDefaultPolicyE36FEB71",
+    "Roles": [
+     {
+      "Ref": "CatalogueFunctionServiceRole02B9B854"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "CatalogueFunction701D9D68": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "6472e8691898b5fab87789c8f787f851899c9b5ffb808c2a451f4ee5892898d5.zip"
+    },
+    "Description": "SmartRetailX Product Catalogue API",
+    "Environment": {
+     "Variables": {
+      "PRODUCTS_TABLE_NAME": {
+       "Ref": "ProductsTable241ADBFF"
+      },
+      "PRODUCT_IMAGES_BUCKET_NAME": {
+       "Ref": "ProductImagesBucket03BDA4C8"
+      }
+     }
+    },
+    "FunctionName": "smartretailx-catalogue-dev",
+    "Handler": "index.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "CatalogueLogGroup1CE16BEB"
+     }
+    },
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "CatalogueFunctionServiceRole02B9B854",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "CatalogueFunctionServiceRoleDefaultPolicyE36FEB71",
+    "CatalogueFunctionServiceRole02B9B854"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueFunction/Resource",
+    "aws:asset:path": "asset.6472e8691898b5fab87789c8f787f851899c9b5ffb808c2a451f4ee5892898d5",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "CatalogueApiB508D633": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "CorsConfiguration": {
+     "AllowHeaders": [
+      "Content-Type",
+      "Authorization"
+     ],
+     "AllowMethods": [
+      "GET",
+      "POST",
+      "PATCH",
+      "DELETE",
+      "OPTIONS"
+     ],
+     "AllowOrigins": [
+      "http://localhost:5173",
+      {
+       "Fn::Join": [
+        "",
+        [
+         "https://",
+         {
+          "Fn::ImportValue": "SmartRetailX-dev-Frontend:ExportsOutputFnGetAttFrontendDistributionE6EAF405DomainNameBCB0DC7A"
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    "Description": "SmartRetailX Product Catalogue HTTP API",
+    "Name": "smartretailx-catalogue-dev-http-api",
+    "ProtocolType": "HTTP",
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/Resource"
+   }
+  },
+  "CatalogueApiDefaultStage64268FE3": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "AutoDeploy": true,
+    "StageName": "$default",
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/DefaultStage/Resource"
+   }
+  },
+  "CatalogueApiGETapiv1productsCatalogueIntegration364989B1": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::GetAtt": [
+      "CatalogueFunction701D9D68",
+      "Arn"
+     ]
+    },
+    "PayloadFormatVersion": "2.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/GET--api--v1--products/CatalogueIntegration/Resource"
+   }
+  },
+  "CatalogueApiGETapiv1productsCatalogueIntegrationPermission13E1CE8B": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "CatalogueFunction701D9D68",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "CatalogueApiB508D633"
+       },
+       "/*/*/api/v1/products"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/GET--api--v1--products/CatalogueIntegration-Permission"
+   }
+  },
+  "CatalogueApiGETapiv1products8EF74530": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "GET /api/v1/products",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "CatalogueApiGETapiv1productsCatalogueIntegration364989B1"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/GET--api--v1--products/Resource"
+   }
+  },
+  "CatalogueApiPOSTapiv1productsCatalogueIntegrationPermissionCDDB6925": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "CatalogueFunction701D9D68",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "CatalogueApiB508D633"
+       },
+       "/*/*/api/v1/products"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/POST--api--v1--products/CatalogueIntegration-Permission"
+   }
+  },
+  "CatalogueApiPOSTapiv1products528D45D3": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "CatalogueApiCatalogueJwtAuthorizer2CB61623"
+    },
+    "RouteKey": "POST /api/v1/products",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "CatalogueApiGETapiv1productsCatalogueIntegration364989B1"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/POST--api--v1--products/Resource"
+   }
+  },
+  "CatalogueApiCatalogueJwtAuthorizer2CB61623": {
+   "Type": "AWS::ApiGatewayV2::Authorizer",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "AuthorizerType": "JWT",
+    "IdentitySource": [
+     "$request.header.Authorization"
+    ],
+    "JwtConfiguration": {
+     "Audience": [
+      {
+       "Fn::ImportValue": "SmartRetailX-dev-Auth:ExportsOutputRefUserPoolWebUserPoolClient4FD9D8952A984FBB"
+      }
+     ],
+     "Issuer": {
+      "Fn::ImportValue": "SmartRetailX-dev-Auth:ExportsOutputFnGetAttUserPool6BA7E5F2ProviderURL1DC61701"
+     }
+    },
+    "Name": "smartretailx-catalogue-dev-jwt-authorizer"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/CatalogueJwtAuthorizer/Resource"
+   }
+  },
+  "CatalogueApiPOSTapiv1productsuploadurlCatalogueIntegrationPermission2A3F2563": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "CatalogueFunction701D9D68",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "CatalogueApiB508D633"
+       },
+       "/*/*/api/v1/products/upload-url"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/POST--api--v1--products--upload-url/CatalogueIntegration-Permission"
+   }
+  },
+  "CatalogueApiPOSTapiv1productsuploadurlFD249FD1": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "CatalogueApiCatalogueJwtAuthorizer2CB61623"
+    },
+    "RouteKey": "POST /api/v1/products/upload-url",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "CatalogueApiGETapiv1productsCatalogueIntegration364989B1"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/POST--api--v1--products--upload-url/Resource"
+   }
+  },
+  "CatalogueApiGETapiv1productsproductIdCatalogueIntegrationPermissionDDC12040": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "CatalogueFunction701D9D68",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "CatalogueApiB508D633"
+       },
+       "/*/*/api/v1/products/{productId}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/GET--api--v1--products--{productId}/CatalogueIntegration-Permission"
+   }
+  },
+  "CatalogueApiGETapiv1productsproductId86235F43": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "GET /api/v1/products/{productId}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "CatalogueApiGETapiv1productsCatalogueIntegration364989B1"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/GET--api--v1--products--{productId}/Resource"
+   }
+  },
+  "CatalogueApiPATCHapiv1productsproductIdCatalogueIntegrationPermission21567F78": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "CatalogueFunction701D9D68",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "CatalogueApiB508D633"
+       },
+       "/*/*/api/v1/products/{productId}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/PATCH--api--v1--products--{productId}/CatalogueIntegration-Permission"
+   }
+  },
+  "CatalogueApiPATCHapiv1productsproductIdBF393A6D": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "CatalogueApiCatalogueJwtAuthorizer2CB61623"
+    },
+    "RouteKey": "PATCH /api/v1/products/{productId}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "CatalogueApiGETapiv1productsCatalogueIntegration364989B1"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/PATCH--api--v1--products--{productId}/Resource"
+   }
+  },
+  "CatalogueApiDELETEapiv1productsproductIdCatalogueIntegrationPermission6813FB2A": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "CatalogueFunction701D9D68",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "CatalogueApiB508D633"
+       },
+       "/*/*/api/v1/products/{productId}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/DELETE--api--v1--products--{productId}/CatalogueIntegration-Permission"
+   }
+  },
+  "CatalogueApiDELETEapiv1productsproductId134152BA": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "CatalogueApiB508D633"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "CatalogueApiCatalogueJwtAuthorizer2CB61623"
+    },
+    "RouteKey": "DELETE /api/v1/products/{productId}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "CatalogueApiGETapiv1productsCatalogueIntegration364989B1"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CatalogueApi/DELETE--api--v1--products--{productId}/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/5WQzU4rMQyFn4WuUwNTxIJdKeJHQoDaq7u5uqo8M2ZIm0lGsdNSonl3lAm0wI7VOY7tL7YLKM4ncHKEWx5X9XpsdAlxIVitFW55GeudxdbVJcQ/WBr6W6jZs70xrkQzPPSKJxAvQ7UmSans/sVRq1+1HV2MvoITkScwpBhy6TSIuyJDQo/liirhUf9f5dSTM7raHag5/gU7NywEhVqyX9GXyNQr4xqGeO+aG+9Clz769L0y2JY1Lq2racXwMMh1sJVoZ5XGFuLcGUo9gx5mzS7dZYnMJAzTJB9AiLNnu+ekcvKtZtbO9go73aDQFnebAuKtSDftdCpKksKFYDP8mU16mrsg2d1ZocbjJ/hHeKibBnlxXr+RH9D7qO/VLLC4dk7sgq/ycnv/LfXk3UbX5NMd1bBfmkjbJvU8BumC9CrdDlZ8vCkKOD2Dk6MVaz32wYpuCeZZ3wGD4SVwgQIAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Catalogue/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "CatalogueApiUrl": {
+   "Value": {
+    "Fn::GetAtt": [
+     "CatalogueApiB508D633",
+     "ApiEndpoint"
+    ]
+   }
+  },
+  "ProductsTableName": {
+   "Value": {
+    "Ref": "ProductsTable241ADBFF"
+   }
+  },
+  "ProductImagesBucketName": {
+   "Value": {
+    "Ref": "ProductImagesBucket03BDA4C8"
+   }
+  },
+  "CatalogueFunctionName": {
+   "Value": {
+    "Ref": "CatalogueFunction701D9D68"
+   }
+  },
+  "ExportsOutputRefCatalogueFunction701D9D68BC006F2A": {
+   "Value": {
+    "Ref": "CatalogueFunction701D9D68"
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-Catalogue:ExportsOutputRefCatalogueFunction701D9D68BC006F2A"
+   }
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

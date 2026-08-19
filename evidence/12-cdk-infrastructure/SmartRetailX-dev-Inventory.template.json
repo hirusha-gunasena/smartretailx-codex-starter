@@ -1,0 +1,1751 @@
+{
+ "Description": "SmartRetailX Inventory consumer and outcome relay infrastructure",
+ "Resources": {
+  "InventoryTableFD135387": {
+   "Type": "AWS::DynamoDB::GlobalTable",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "productId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "productId",
+      "KeyType": "HASH"
+     }
+    ],
+    "Replicas": [
+     {
+      "DeletionProtectionEnabled": false,
+      "PointInTimeRecoverySpecification": {
+       "PointInTimeRecoveryEnabled": false
+      },
+      "Region": {
+       "Ref": "AWS::Region"
+      },
+      "TableClass": "STANDARD",
+      "Tags": [
+       {
+        "Key": "Environment",
+        "Value": "dev"
+       },
+       {
+        "Key": "ManagedBy",
+        "Value": "CDK"
+       },
+       {
+        "Key": "Module",
+        "Value": "COMP60010"
+       },
+       {
+        "Key": "Owner",
+        "Value": "SmartRetailX"
+       },
+       {
+        "Key": "Project",
+        "Value": "SmartRetailX"
+       }
+      ]
+     }
+    ],
+    "SSESpecification": {
+     "SSEEnabled": false
+    },
+    "TableName": "smartretailx-inventory-dev"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryTable/Resource"
+   }
+  },
+  "InventoryReservationsTableEBA8E26B": {
+   "Type": "AWS::DynamoDB::GlobalTable",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "eventId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "eventId",
+      "KeyType": "HASH"
+     }
+    ],
+    "Replicas": [
+     {
+      "DeletionProtectionEnabled": false,
+      "PointInTimeRecoverySpecification": {
+       "PointInTimeRecoveryEnabled": false
+      },
+      "Region": {
+       "Ref": "AWS::Region"
+      },
+      "TableClass": "STANDARD",
+      "Tags": [
+       {
+        "Key": "Environment",
+        "Value": "dev"
+       },
+       {
+        "Key": "ManagedBy",
+        "Value": "CDK"
+       },
+       {
+        "Key": "Module",
+        "Value": "COMP60010"
+       },
+       {
+        "Key": "Owner",
+        "Value": "SmartRetailX"
+       },
+       {
+        "Key": "Project",
+        "Value": "SmartRetailX"
+       }
+      ]
+     }
+    ],
+    "SSESpecification": {
+     "SSEEnabled": false
+    },
+    "StreamSpecification": {
+     "StreamViewType": "NEW_IMAGE"
+    },
+    "TableName": "smartretailx-inventory-reservations-dev"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryReservationsTable/Resource"
+   }
+  },
+  "InventoryDeadLetterQueue9C3067C6": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "MessageRetentionPeriod": 1209600,
+    "QueueName": "smartretailx-inventory-orders-dlq-dev",
+    "SqsManagedSseEnabled": true,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryDeadLetterQueue/Resource"
+   }
+  },
+  "InventoryQueueB99B90CB": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "MessageRetentionPeriod": 345600,
+    "QueueName": "smartretailx-inventory-orders-dev",
+    "RedrivePolicy": {
+     "deadLetterTargetArn": {
+      "Fn::GetAtt": [
+       "InventoryDeadLetterQueue9C3067C6",
+       "Arn"
+      ]
+     },
+     "maxReceiveCount": 5
+    },
+    "SqsManagedSseEnabled": true,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "VisibilityTimeout": 120
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryQueue/Resource"
+   }
+  },
+  "InventoryQueuePolicy21134A06": {
+   "Type": "AWS::SQS::QueuePolicy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "sqs:SendMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl"
+       ],
+       "Condition": {
+        "ArnEquals": {
+         "aws:SourceArn": {
+          "Fn::GetAtt": [
+           "OrderCreatedToInventoryRule9AC84271",
+           "Arn"
+          ]
+         }
+        }
+       },
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "events.amazonaws.com"
+       },
+       "Resource": {
+        "Fn::GetAtt": [
+         "InventoryQueueB99B90CB",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Queues": [
+     {
+      "Ref": "InventoryQueueB99B90CB"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryQueue/Policy/Resource"
+   }
+  },
+  "InventoryOutcomeRelayFailureDeadLetterQueueFBC8AF89": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "MessageRetentionPeriod": 1209600,
+    "QueueName": "smartretailx-inventory-outcome-relay-failures-dlq-dev",
+    "SqsManagedSseEnabled": true,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryOutcomeRelayFailureDeadLetterQueue/Resource"
+   }
+  },
+  "InventoryOutcomeRelayFailureQueue4C39A308": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "MessageRetentionPeriod": 1209600,
+    "QueueName": "smartretailx-inventory-outcome-relay-failures-dev",
+    "RedrivePolicy": {
+     "deadLetterTargetArn": {
+      "Fn::GetAtt": [
+       "InventoryOutcomeRelayFailureDeadLetterQueueFBC8AF89",
+       "Arn"
+      ]
+     },
+     "maxReceiveCount": 5
+    },
+    "SqsManagedSseEnabled": true,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryOutcomeRelayFailureQueue/Resource"
+   }
+  },
+  "InventoryConsumerLogGroup70195DD1": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/smartretailx-inventory-consumer-dev",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryConsumerLogGroup/Resource"
+   }
+  },
+  "InventoryOutcomeRelayLogGroup44CC1C0F": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/lambda/smartretailx-inventory-outcome-relay-dev",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryOutcomeRelayLogGroup/Resource"
+   }
+  },
+  "InventoryConsumerFunctionServiceRole0AAB8652": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryConsumerFunction/ServiceRole/Resource"
+   }
+  },
+  "InventoryConsumerFunctionServiceRoleDefaultPolicy0FF31C49": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "dynamodb:UpdateItem",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "InventoryTableFD135387",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "InventoryReservationsTableEBA8E26B",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueUrl",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "InventoryQueueB99B90CB",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "InventoryConsumerFunctionServiceRoleDefaultPolicy0FF31C49",
+    "Roles": [
+     {
+      "Ref": "InventoryConsumerFunctionServiceRole0AAB8652"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryConsumerFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "InventoryConsumerFunction64DA1948": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "a97be08c6341b8078b8193c9372dbd0e920e91f1b8ea9387896e21458ad9e8c6.zip"
+    },
+    "Description": "SmartRetailX Inventory Order Consumer",
+    "Environment": {
+     "Variables": {
+      "INVENTORY_TABLE_NAME": {
+       "Ref": "InventoryTableFD135387"
+      },
+      "INVENTORY_RESERVATIONS_TABLE_NAME": {
+       "Ref": "InventoryReservationsTableEBA8E26B"
+      }
+     }
+    },
+    "FunctionName": "smartretailx-inventory-consumer-dev",
+    "Handler": "index.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "InventoryConsumerLogGroup70195DD1"
+     }
+    },
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "InventoryConsumerFunctionServiceRole0AAB8652",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Timeout": 15
+   },
+   "DependsOn": [
+    "InventoryConsumerFunctionServiceRoleDefaultPolicy0FF31C49",
+    "InventoryConsumerFunctionServiceRole0AAB8652"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryConsumerFunction/Resource",
+    "aws:asset:path": "asset.a97be08c6341b8078b8193c9372dbd0e920e91f1b8ea9387896e21458ad9e8c6",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "InventoryConsumerFunctionSqsEventSourceSmartRetailXdevInventoryInventoryQueue146BB11F0B76FFE1": {
+   "Type": "AWS::Lambda::EventSourceMapping",
+   "Properties": {
+    "BatchSize": 10,
+    "EventSourceArn": {
+     "Fn::GetAtt": [
+      "InventoryQueueB99B90CB",
+      "Arn"
+     ]
+    },
+    "FunctionName": {
+     "Ref": "InventoryConsumerFunction64DA1948"
+    },
+    "FunctionResponseTypes": [
+     "ReportBatchItemFailures"
+    ],
+    "MaximumBatchingWindowInSeconds": 0,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryConsumerFunction/SqsEventSource:SmartRetailXdevInventoryInventoryQueue146BB11F/Resource"
+   }
+  },
+  "InventoryOutcomeRelayFunctionServiceRole10B477C1": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryOutcomeRelayFunction/ServiceRole/Resource"
+   }
+  },
+  "InventoryOutcomeRelayFunctionServiceRoleDefaultPolicy423D8309": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "events:PutEvents",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputFnGetAttOrderEventBus8DA2948AArnAA5BD4F9"
+       }
+      },
+      {
+       "Action": "dynamodb:ListStreams",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "InventoryReservationsTableEBA8E26B",
+         "StreamArn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "dynamodb:DescribeStream",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "InventoryReservationsTableEBA8E26B",
+         "StreamArn"
+        ]
+       }
+      },
+      {
+       "Action": "sqs:SendMessage",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "InventoryOutcomeRelayFailureQueue4C39A308",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "InventoryOutcomeRelayFunctionServiceRoleDefaultPolicy423D8309",
+    "Roles": [
+     {
+      "Ref": "InventoryOutcomeRelayFunctionServiceRole10B477C1"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryOutcomeRelayFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "InventoryOutcomeRelayFunctionA312C69F": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "1d6772715e515d2c303fdba34227e07145b30c7f96e7f17bd4a051bfecf0d015.zip"
+    },
+    "Description": "SmartRetailX Inventory Outcome Event Relay",
+    "Environment": {
+     "Variables": {
+      "INVENTORY_EVENT_BUS_NAME": {
+       "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventBus8DA2948ACC38D9BB"
+      }
+     }
+    },
+    "FunctionName": "smartretailx-inventory-outcome-relay-dev",
+    "Handler": "index.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "InventoryOutcomeRelayLogGroup44CC1C0F"
+     }
+    },
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "InventoryOutcomeRelayFunctionServiceRole10B477C1",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "InventoryOutcomeRelayFunctionServiceRoleDefaultPolicy423D8309",
+    "InventoryOutcomeRelayFunctionServiceRole10B477C1"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryOutcomeRelayFunction/Resource",
+    "aws:asset:path": "asset.1d6772715e515d2c303fdba34227e07145b30c7f96e7f17bd4a051bfecf0d015",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "InventoryReservationsStreamEventSourceMapping5888535C": {
+   "Type": "AWS::Lambda::EventSourceMapping",
+   "Properties": {
+    "BatchSize": 10,
+    "BisectBatchOnFunctionError": true,
+    "DestinationConfig": {
+     "OnFailure": {
+      "Destination": {
+       "Fn::GetAtt": [
+        "InventoryOutcomeRelayFailureQueue4C39A308",
+        "Arn"
+       ]
+      }
+     }
+    },
+    "EventSourceArn": {
+     "Fn::GetAtt": [
+      "InventoryReservationsTableEBA8E26B",
+      "StreamArn"
+     ]
+    },
+    "FunctionName": {
+     "Ref": "InventoryOutcomeRelayFunctionA312C69F"
+    },
+    "FunctionResponseTypes": [
+     "ReportBatchItemFailures"
+    ],
+    "MaximumBatchingWindowInSeconds": 0,
+    "MaximumRecordAgeInSeconds": 3600,
+    "MaximumRetryAttempts": 3,
+    "StartingPosition": "TRIM_HORIZON",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryReservationsStreamEventSourceMapping/Resource"
+   }
+  },
+  "OrderCreatedToInventoryRule9AC84271": {
+   "Type": "AWS::Events::Rule",
+   "Properties": {
+    "Description": "Routes SmartRetailX OrderCreated events to the Inventory consumer queue",
+    "EventBusName": {
+     "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventBus8DA2948ACC38D9BB"
+    },
+    "EventPattern": {
+     "source": [
+      "smartretailx.order-service"
+     ],
+     "detail-type": [
+      "OrderCreated"
+     ]
+    },
+    "Name": "smartretailx-order-created-to-inventory-dev",
+    "State": "ENABLED",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Targets": [
+     {
+      "Arn": {
+       "Fn::GetAtt": [
+        "InventoryQueueB99B90CB",
+        "Arn"
+       ]
+      },
+      "Id": "Target0"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/OrderCreatedToInventoryRule/Resource"
+   }
+  },
+  "InventoryApiFunctionServiceRole5689DE17": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApiFunction/ServiceRole/Resource"
+   }
+  },
+  "InventoryApiFunctionServiceRoleDefaultPolicy4ACE47D2": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "InventoryTableFD135387",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "InventoryApiFunctionServiceRoleDefaultPolicy4ACE47D2",
+    "Roles": [
+     {
+      "Ref": "InventoryApiFunctionServiceRole5689DE17"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApiFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "InventoryApiFunctionA4136AD0": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": {
+      "Fn::Sub": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}"
+     },
+     "S3Key": "326a44c73d7cec02008314adb171195ab1e62bb0370c73942b6579cf220f15f9.zip"
+    },
+    "Description": "SmartRetailX Inventory HTTP API",
+    "Environment": {
+     "Variables": {
+      "INVENTORY_TABLE_NAME": {
+       "Ref": "InventoryTableFD135387"
+      }
+     }
+    },
+    "FunctionName": "smartretailx-inventory-api-dev",
+    "Handler": "index.handler",
+    "MemorySize": 256,
+    "Role": {
+     "Fn::GetAtt": [
+      "InventoryApiFunctionServiceRole5689DE17",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "InventoryApiFunctionServiceRoleDefaultPolicy4ACE47D2",
+    "InventoryApiFunctionServiceRole5689DE17"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApiFunction/Resource",
+    "aws:asset:path": "asset.326a44c73d7cec02008314adb171195ab1e62bb0370c73942b6579cf220f15f9",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "InventoryApi49B09E7D": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "CorsConfiguration": {
+     "AllowHeaders": [
+      "Content-Type",
+      "Authorization"
+     ],
+     "AllowMethods": [
+      "GET",
+      "POST",
+      "PATCH",
+      "OPTIONS"
+     ],
+     "AllowOrigins": [
+      "http://localhost:5173",
+      {
+       "Fn::Join": [
+        "",
+        [
+         "https://",
+         {
+          "Fn::ImportValue": "SmartRetailX-dev-Frontend:ExportsOutputFnGetAttFrontendDistributionE6EAF405DomainNameBCB0DC7A"
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    "Description": "SmartRetailX Inventory HTTP API",
+    "Name": "smartretailx-inventory-api-dev-http-api",
+    "ProtocolType": "HTTP",
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApi/Resource"
+   }
+  },
+  "InventoryApiDefaultStage7F0CEF06": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "InventoryApi49B09E7D"
+    },
+    "AutoDeploy": true,
+    "StageName": "$default",
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApi/DefaultStage/Resource"
+   }
+  },
+  "InventoryApiGETapiv1inventoryproductIdInventoryIntegrationF032A714": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "InventoryApi49B09E7D"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::GetAtt": [
+      "InventoryApiFunctionA4136AD0",
+      "Arn"
+     ]
+    },
+    "PayloadFormatVersion": "2.0"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApi/GET--api--v1--inventory--{productId}/InventoryIntegration/Resource"
+   }
+  },
+  "InventoryApiGETapiv1inventoryproductIdInventoryIntegrationPermissionDDFF3D50": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InventoryApiFunctionA4136AD0",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "InventoryApi49B09E7D"
+       },
+       "/*/*/api/v1/inventory/{productId}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApi/GET--api--v1--inventory--{productId}/InventoryIntegration-Permission"
+   }
+  },
+  "InventoryApiGETapiv1inventoryproductId81515989": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "InventoryApi49B09E7D"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "InventoryApiInventoryJwtAuthorizer1E17129A"
+    },
+    "RouteKey": "GET /api/v1/inventory/{productId}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "InventoryApiGETapiv1inventoryproductIdInventoryIntegrationF032A714"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApi/GET--api--v1--inventory--{productId}/Resource"
+   }
+  },
+  "InventoryApiInventoryJwtAuthorizer1E17129A": {
+   "Type": "AWS::ApiGatewayV2::Authorizer",
+   "Properties": {
+    "ApiId": {
+     "Ref": "InventoryApi49B09E7D"
+    },
+    "AuthorizerType": "JWT",
+    "IdentitySource": [
+     "$request.header.Authorization"
+    ],
+    "JwtConfiguration": {
+     "Audience": [
+      {
+       "Fn::ImportValue": "SmartRetailX-dev-Auth:ExportsOutputRefUserPoolWebUserPoolClient4FD9D8952A984FBB"
+      }
+     ],
+     "Issuer": {
+      "Fn::ImportValue": "SmartRetailX-dev-Auth:ExportsOutputFnGetAttUserPool6BA7E5F2ProviderURL1DC61701"
+     }
+    },
+    "Name": "smartretailx-inventory-api-dev-jwt-authorizer"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApi/InventoryJwtAuthorizer/Resource"
+   }
+  },
+  "InventoryApiPATCHapiv1inventoryproductIdInventoryIntegrationPermission27E1C85C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "InventoryApiFunctionA4136AD0",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:",
+       {
+        "Ref": "AWS::Region"
+       },
+       ":",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":",
+       {
+        "Ref": "InventoryApi49B09E7D"
+       },
+       "/*/*/api/v1/inventory/{productId}"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApi/PATCH--api--v1--inventory--{productId}/InventoryIntegration-Permission"
+   }
+  },
+  "InventoryApiPATCHapiv1inventoryproductId53B42A96": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "InventoryApi49B09E7D"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "InventoryApiInventoryJwtAuthorizer1E17129A"
+    },
+    "RouteKey": "PATCH /api/v1/inventory/{productId}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "InventoryApiGETapiv1inventoryproductIdInventoryIntegrationF032A714"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/InventoryApi/PATCH--api--v1--inventory--{productId}/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/21Q227CMAz9Ft6Dx8q0d0Abm7QLg2mvyG1NF0iTrnZALOq/T0kZSNNeci62jh1nkN2OYTTAAw+Lcjc0OoewEix2Cg+8DuXRYu3KHMI75oY+MjXb2LlxOZpkdIq/GMKbJ0+x1JP0LpzRxfFs9rJTxlUM4clV89b5JpZ/eacM1nmJa+tK2jK8JLj3thDtrNJYQ1g6k+YkvEz4DefxGplJGCYRFI9h6osdyRSZTvEQZht7Tr3bk5WV821Bz9g02lYx7393QW2tmbWznaLYwRCW/rSQj8fARlcodMDjPoPwINJMGh3LEaJcCVapvyfRWjovPXu0QlWLaa/Zxv6Rl76Jl0/X6m9qU/RZdZ1K347Zp5VfvTReOhVPClu+2mcZXN/AaLBlrYett6JrgmWPP/LR22MNAgAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Inventory/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "InventoryApiUrl": {
+   "Value": {
+    "Fn::GetAtt": [
+     "InventoryApi49B09E7D",
+     "ApiEndpoint"
+    ]
+   }
+  },
+  "InventoryTableName": {
+   "Value": {
+    "Ref": "InventoryTableFD135387"
+   }
+  },
+  "InventoryReservationsTableName": {
+   "Value": {
+    "Ref": "InventoryReservationsTableEBA8E26B"
+   }
+  },
+  "InventoryQueueName": {
+   "Value": {
+    "Fn::GetAtt": [
+     "InventoryQueueB99B90CB",
+     "QueueName"
+    ]
+   }
+  },
+  "InventoryQueueUrl": {
+   "Value": {
+    "Ref": "InventoryQueueB99B90CB"
+   }
+  },
+  "InventoryDlqName": {
+   "Value": {
+    "Fn::GetAtt": [
+     "InventoryDeadLetterQueue9C3067C6",
+     "QueueName"
+    ]
+   }
+  },
+  "InventoryConsumerFunctionName": {
+   "Value": {
+    "Ref": "InventoryConsumerFunction64DA1948"
+   }
+  },
+  "InventoryOrderCreatedRuleName": {
+   "Value": {
+    "Ref": "OrderCreatedToInventoryRule9AC84271"
+   }
+  },
+  "InventoryReservationsStreamArn": {
+   "Value": {
+    "Fn::GetAtt": [
+     "InventoryReservationsTableEBA8E26B",
+     "StreamArn"
+    ]
+   }
+  },
+  "InventoryOutcomeRelayFunctionName": {
+   "Value": {
+    "Ref": "InventoryOutcomeRelayFunctionA312C69F"
+   }
+  },
+  "InventoryOutcomeRelayFailureQueueName": {
+   "Value": {
+    "Fn::GetAtt": [
+     "InventoryOutcomeRelayFailureQueue4C39A308",
+     "QueueName"
+    ]
+   }
+  },
+  "InventoryOutcomeRelayFailureDlqName": {
+   "Value": {
+    "Fn::GetAtt": [
+     "InventoryOutcomeRelayFailureDeadLetterQueueFBC8AF89",
+     "QueueName"
+    ]
+   }
+  },
+  "ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D": {
+   "Value": {
+    "Ref": "InventoryApiFunctionA4136AD0"
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D"
+   }
+  },
+  "ExportsOutputRefInventoryConsumerFunction64DA194838F83E12": {
+   "Value": {
+    "Ref": "InventoryConsumerFunction64DA1948"
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryConsumerFunction64DA194838F83E12"
+   }
+  },
+  "ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F": {
+   "Value": {
+    "Ref": "InventoryOutcomeRelayFunctionA312C69F"
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F"
+   }
+  },
+  "ExportsOutputFnGetAttInventoryQueueB99B90CBQueueNameBE2BD1D3": {
+   "Value": {
+    "Fn::GetAtt": [
+     "InventoryQueueB99B90CB",
+     "QueueName"
+    ]
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-Inventory:ExportsOutputFnGetAttInventoryQueueB99B90CBQueueNameBE2BD1D3"
+   }
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

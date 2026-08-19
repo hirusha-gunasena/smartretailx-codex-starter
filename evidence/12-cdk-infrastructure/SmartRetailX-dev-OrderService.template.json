@@ -1,0 +1,1966 @@
+{
+ "Description": "SmartRetailX authenticated private Order ECS Fargate service",
+ "Resources": {
+  "OrderVpc494511AA": {
+   "Type": "AWS::EC2::VPC",
+   "Properties": {
+    "CidrBlock": "10.24.0.0/16",
+    "EnableDnsHostnames": true,
+    "EnableDnsSupport": true,
+    "InstanceTenancy": "default",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Name",
+      "Value": "smartretailx-order-dev-vpc"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/Resource"
+   }
+  },
+  "OrderVpcPublicSubnet1Subnet325BA510": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      0,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.24.0.0/24",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Name",
+      "Value": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet1"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet1/Subnet"
+   }
+  },
+  "OrderVpcPublicSubnet1RouteTableE8AA934A": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Name",
+      "Value": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet1"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet1/RouteTable"
+   }
+  },
+  "OrderVpcPublicSubnet1RouteTableAssociation01305BA3": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "OrderVpcPublicSubnet1RouteTableE8AA934A"
+    },
+    "SubnetId": {
+     "Ref": "OrderVpcPublicSubnet1Subnet325BA510"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet1/RouteTableAssociation"
+   }
+  },
+  "OrderVpcPublicSubnet1DefaultRouteB5C7F116": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "OrderVpcIGWFCEC4583"
+    },
+    "RouteTableId": {
+     "Ref": "OrderVpcPublicSubnet1RouteTableE8AA934A"
+    }
+   },
+   "DependsOn": [
+    "OrderVpcVPCGW574C7F3C"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet1/DefaultRoute"
+   }
+  },
+  "OrderVpcPublicSubnet2SubnetEFC000C9": {
+   "Type": "AWS::EC2::Subnet",
+   "Properties": {
+    "AvailabilityZone": {
+     "Fn::Select": [
+      1,
+      {
+       "Fn::GetAZs": ""
+      }
+     ]
+    },
+    "CidrBlock": "10.24.1.0/24",
+    "MapPublicIpOnLaunch": true,
+    "Tags": [
+     {
+      "Key": "aws-cdk:subnet-name",
+      "Value": "Public"
+     },
+     {
+      "Key": "aws-cdk:subnet-type",
+      "Value": "Public"
+     },
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Name",
+      "Value": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet2"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet2/Subnet"
+   }
+  },
+  "OrderVpcPublicSubnet2RouteTable759D33F2": {
+   "Type": "AWS::EC2::RouteTable",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Name",
+      "Value": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet2"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet2/RouteTable"
+   }
+  },
+  "OrderVpcPublicSubnet2RouteTableAssociation36520436": {
+   "Type": "AWS::EC2::SubnetRouteTableAssociation",
+   "Properties": {
+    "RouteTableId": {
+     "Ref": "OrderVpcPublicSubnet2RouteTable759D33F2"
+    },
+    "SubnetId": {
+     "Ref": "OrderVpcPublicSubnet2SubnetEFC000C9"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet2/RouteTableAssociation"
+   }
+  },
+  "OrderVpcPublicSubnet2DefaultRouteA2E8EC9E": {
+   "Type": "AWS::EC2::Route",
+   "Properties": {
+    "DestinationCidrBlock": "0.0.0.0/0",
+    "GatewayId": {
+     "Ref": "OrderVpcIGWFCEC4583"
+    },
+    "RouteTableId": {
+     "Ref": "OrderVpcPublicSubnet2RouteTable759D33F2"
+    }
+   },
+   "DependsOn": [
+    "OrderVpcVPCGW574C7F3C"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/PublicSubnet2/DefaultRoute"
+   }
+  },
+  "OrderVpcIGWFCEC4583": {
+   "Type": "AWS::EC2::InternetGateway",
+   "Properties": {
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Name",
+      "Value": "smartretailx-order-dev-vpc"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/IGW"
+   }
+  },
+  "OrderVpcVPCGW574C7F3C": {
+   "Type": "AWS::EC2::VPCGatewayAttachment",
+   "Properties": {
+    "InternetGatewayId": {
+     "Ref": "OrderVpcIGWFCEC4583"
+    },
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpc/VPCGW"
+   }
+  },
+  "VpcLinkSecurityGroupB3941EDC": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Allows the Order API Gateway VPC Link to reach only the internal ALB listener",
+    "GroupName": "smartretailx-order-dev-vpc-link-sg",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/VpcLinkSecurityGroup/Resource"
+   }
+  },
+  "VpcLinkSecurityGrouptoSmartRetailXdevOrderServiceAlbSecurityGroupC9AE835480CE542930": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "VPC Link to internal Order ALB listener",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AlbSecurityGroup86A59E99",
+      "GroupId"
+     ]
+    },
+    "FromPort": 80,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "VpcLinkSecurityGroupB3941EDC",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 80
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/VpcLinkSecurityGroup/to SmartRetailXdevOrderServiceAlbSecurityGroupC9AE8354:80"
+   }
+  },
+  "AlbSecurityGroup86A59E99": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Allows only API Gateway VPC Link traffic to the internal Order ALB",
+    "GroupName": "smartretailx-order-dev-alb-sg",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/AlbSecurityGroup/Resource"
+   }
+  },
+  "AlbSecurityGroupfromSmartRetailXdevOrderServiceVpcLinkSecurityGroup498BFA6A80616AA3E8": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Order API VPC Link only",
+    "FromPort": 80,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "AlbSecurityGroup86A59E99",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "VpcLinkSecurityGroupB3941EDC",
+      "GroupId"
+     ]
+    },
+    "ToPort": 80
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/AlbSecurityGroup/from SmartRetailXdevOrderServiceVpcLinkSecurityGroup498BFA6A:80"
+   }
+  },
+  "AlbSecurityGrouptoSmartRetailXdevOrderServiceTaskSecurityGroupAB39C93E3000E3F17C40": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "Internal Order ALB to Fargate tasks",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "TaskSecurityGroup2D2EA438",
+      "GroupId"
+     ]
+    },
+    "FromPort": 3000,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "AlbSecurityGroup86A59E99",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 3000
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/AlbSecurityGroup/to SmartRetailXdevOrderServiceTaskSecurityGroupAB39C93E:3000"
+   }
+  },
+  "TaskSecurityGroup2D2EA438": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Allows only internal Order ALB traffic to Fargate tasks",
+    "GroupName": "smartretailx-order-dev-task-sg",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/TaskSecurityGroup/Resource"
+   }
+  },
+  "TaskSecurityGroupfromSmartRetailXdevOrderServiceAlbSecurityGroupC9AE83543000A673D96D": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Internal Order ALB only",
+    "FromPort": 3000,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "TaskSecurityGroup2D2EA438",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "AlbSecurityGroup86A59E99",
+      "GroupId"
+     ]
+    },
+    "ToPort": 3000
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/TaskSecurityGroup/from SmartRetailXdevOrderServiceAlbSecurityGroupC9AE8354:3000"
+   }
+  },
+  "OrderClusterB8E5F262": {
+   "Type": "AWS::ECS::Cluster",
+   "Properties": {
+    "ClusterName": "smartretailx-order-dev",
+    "ClusterSettings": [
+     {
+      "Name": "containerInsights",
+      "Value": "disabled"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderCluster/Resource"
+   }
+  },
+  "OrderContainerLogGroup17EBFC0C": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/ecs/smartretailx-order-dev",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderContainerLogGroup/Resource"
+   }
+  },
+  "OrderTaskExecutionRole7CCF58FD": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Description": "Pulls the Order image from ECR and writes ECS container logs",
+    "RoleName": "smartretailx-order-dev-execution-role",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderTaskExecutionRole/Resource"
+   }
+  },
+  "OrderTaskExecutionRoleDefaultPolicyAC67B87E": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderRegistry:ExportsOutputFnGetAttOrderServiceRepository86684BF7Arn04558D10"
+       }
+      },
+      {
+       "Action": "ecr:GetAuthorizationToken",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "OrderContainerLogGroup17EBFC0C",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "OrderTaskExecutionRoleDefaultPolicyAC67B87E",
+    "Roles": [
+     {
+      "Ref": "OrderTaskExecutionRole7CCF58FD"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderTaskExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "OrderApplicationTaskRole5658F148": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Description": "Least-privilege DynamoDB role for the Order REST application",
+    "RoleName": "smartretailx-order-dev-task-role",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderApplicationTaskRole/Resource"
+   }
+  },
+  "OrderApplicationTaskRoleDefaultPolicyDC516CB2": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:Scan"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":dynamodb:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":table/smartretailx-orders-dev"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "dynamodb:Query",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":dynamodb:",
+          {
+           "Ref": "AWS::Region"
+          },
+          ":",
+          {
+           "Ref": "AWS::AccountId"
+          },
+          ":table/smartretailx-orders-dev/index/customerId-createdAt-index"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "OrderApplicationTaskRoleDefaultPolicyDC516CB2",
+    "Roles": [
+     {
+      "Ref": "OrderApplicationTaskRole5658F148"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderApplicationTaskRole/DefaultPolicy/Resource"
+   }
+  },
+  "OrderTaskDefinition32E48BB4": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Environment": [
+       {
+        "Name": "COGNITO_USER_POOL_CLIENT_ID",
+        "Value": {
+         "Fn::ImportValue": "SmartRetailX-dev-Auth:ExportsOutputRefUserPoolWebUserPoolClient4FD9D8952A984FBB"
+        }
+       },
+       {
+        "Name": "COGNITO_USER_POOL_ISSUER",
+        "Value": {
+         "Fn::ImportValue": "SmartRetailX-dev-Auth:ExportsOutputFnGetAttUserPool6BA7E5F2ProviderURL1DC61701"
+        }
+       },
+       {
+        "Name": "NODE_ENV",
+        "Value": "production"
+       },
+       {
+        "Name": "ORDERS_TABLE_NAME",
+        "Value": "smartretailx-orders-dev"
+       },
+       {
+        "Name": "PORT",
+        "Value": "3000"
+       }
+      ],
+      "Essential": true,
+      "Image": {
+       "Fn::Join": [
+        "",
+        [
+         {
+          "Fn::Select": [
+           4,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "SmartRetailX-dev-OrderRegistry:ExportsOutputFnGetAttOrderServiceRepository86684BF7Arn04558D10"
+             }
+            ]
+           }
+          ]
+         },
+         ".dkr.ecr.",
+         {
+          "Fn::Select": [
+           3,
+           {
+            "Fn::Split": [
+             ":",
+             {
+              "Fn::ImportValue": "SmartRetailX-dev-OrderRegistry:ExportsOutputFnGetAttOrderServiceRepository86684BF7Arn04558D10"
+             }
+            ]
+           }
+          ]
+         },
+         ".",
+         {
+          "Ref": "AWS::URLSuffix"
+         },
+         "/",
+         {
+          "Fn::ImportValue": "SmartRetailX-dev-OrderRegistry:ExportsOutputRefOrderServiceRepository86684BF7C148017B"
+         },
+         ":15c8a5667ef256ed95833a69c3bf2c8b12246805"
+        ]
+       ]
+      },
+      "LinuxParameters": {
+       "Capabilities": {
+        "Drop": [
+         "ALL"
+        ]
+       },
+       "InitProcessEnabled": true
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "OrderContainerLogGroup17EBFC0C"
+        },
+        "awslogs-stream-prefix": "order-service",
+        "awslogs-region": {
+         "Ref": "AWS::Region"
+        }
+       }
+      },
+      "Name": "order-service",
+      "PortMappings": [
+       {
+        "ContainerPort": 3000,
+        "HostPort": 3000,
+        "Name": "http",
+        "Protocol": "tcp"
+       }
+      ],
+      "Privileged": false,
+      "ReadonlyRootFilesystem": true,
+      "StopTimeout": 30,
+      "User": "node"
+     }
+    ],
+    "Cpu": "256",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "OrderTaskExecutionRole7CCF58FD",
+      "Arn"
+     ]
+    },
+    "Family": "smartretailx-order-dev",
+    "Memory": "512",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "RuntimePlatform": {
+     "CpuArchitecture": "X86_64",
+     "OperatingSystemFamily": "LINUX"
+    },
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "OrderApplicationTaskRole5658F148",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderTaskDefinition/Resource"
+   }
+  },
+  "OrderLoadBalancer7265D7F7": {
+   "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+   "Properties": {
+    "LoadBalancerAttributes": [
+     {
+      "Key": "deletion_protection.enabled",
+      "Value": "false"
+     }
+    ],
+    "Name": "smartretailx-order-dev-alb",
+    "Scheme": "internal",
+    "SecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "AlbSecurityGroup86A59E99",
+       "GroupId"
+      ]
+     }
+    ],
+    "Subnets": [
+     {
+      "Ref": "OrderVpcPublicSubnet1Subnet325BA510"
+     },
+     {
+      "Ref": "OrderVpcPublicSubnet2SubnetEFC000C9"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Type": "application"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderLoadBalancer/Resource"
+   }
+  },
+  "OrderLoadBalancerOrderHttpListenerD64D62E0": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "OrderTargetGroup1173FD09"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "OrderLoadBalancer7265D7F7"
+    },
+    "Port": 80,
+    "Protocol": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderLoadBalancer/OrderHttpListener/Resource"
+   }
+  },
+  "OrderTargetGroup1173FD09": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 30,
+    "HealthCheckPath": "/health",
+    "HealthCheckPort": "traffic-port",
+    "HealthCheckProtocol": "HTTP",
+    "HealthCheckTimeoutSeconds": 5,
+    "HealthyThresholdCount": 2,
+    "Matcher": {
+     "HttpCode": "200"
+    },
+    "Name": "smartretailx-order-dev-tg",
+    "Port": 3000,
+    "Protocol": "HTTP",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "TargetGroupAttributes": [
+     {
+      "Key": "deregistration_delay.timeout_seconds",
+      "Value": "30"
+     },
+     {
+      "Key": "stickiness.enabled",
+      "Value": "false"
+     }
+    ],
+    "TargetType": "ip",
+    "UnhealthyThresholdCount": 3,
+    "VpcId": {
+     "Ref": "OrderVpc494511AA"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderTargetGroup/Resource"
+   }
+  },
+  "OrderFargateServiceC016F029": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "Cluster": {
+     "Ref": "OrderClusterB8E5F262"
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "DeploymentCircuitBreaker": {
+      "Enable": true,
+      "Rollback": true
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 100
+    },
+    "DeploymentController": {
+     "Type": "ECS"
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "EnableExecuteCommand": false,
+    "HealthCheckGracePeriodSeconds": 60,
+    "LaunchType": "FARGATE",
+    "LoadBalancers": [
+     {
+      "ContainerName": "order-service",
+      "ContainerPort": 3000,
+      "TargetGroupArn": {
+       "Ref": "OrderTargetGroup1173FD09"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "ENABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "TaskSecurityGroup2D2EA438",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       {
+        "Ref": "OrderVpcPublicSubnet1Subnet325BA510"
+       },
+       {
+        "Ref": "OrderVpcPublicSubnet2SubnetEFC000C9"
+       }
+      ]
+     }
+    },
+    "ServiceName": "smartretailx-order-dev",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "TaskDefinition": {
+     "Ref": "OrderTaskDefinition32E48BB4"
+    }
+   },
+   "DependsOn": [
+    "OrderApplicationTaskRoleDefaultPolicyDC516CB2",
+    "OrderApplicationTaskRole5658F148",
+    "OrderLoadBalancerOrderHttpListenerD64D62E0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderFargateService/Service"
+   }
+  },
+  "OrderFargateServiceTaskCountTarget6381FA3D": {
+   "Type": "AWS::ApplicationAutoScaling::ScalableTarget",
+   "Properties": {
+    "MaxCapacity": 2,
+    "MinCapacity": 1,
+    "ResourceId": {
+     "Fn::Join": [
+      "",
+      [
+       "service/",
+       {
+        "Ref": "OrderClusterB8E5F262"
+       },
+       "/",
+       {
+        "Fn::GetAtt": [
+         "OrderFargateServiceC016F029",
+         "Name"
+        ]
+       }
+      ]
+     ]
+    },
+    "RoleARN": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":iam::",
+       {
+        "Ref": "AWS::AccountId"
+       },
+       ":role/aws-service-role/ecs.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_ECSService"
+      ]
+     ]
+    },
+    "ScalableDimension": "ecs:service:DesiredCount",
+    "ServiceNamespace": "ecs"
+   },
+   "DependsOn": [
+    "OrderApplicationTaskRoleDefaultPolicyDC516CB2",
+    "OrderApplicationTaskRole5658F148"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderFargateService/TaskCount/Target/Resource"
+   }
+  },
+  "OrderFargateServiceTaskCountTargetOrderCpuTargetTracking19595399": {
+   "Type": "AWS::ApplicationAutoScaling::ScalingPolicy",
+   "Properties": {
+    "PolicyName": "SmartRetailXdevOrderServiceOrderFargateServiceTaskCountTargetOrderCpuTargetTracking6535EF6E",
+    "PolicyType": "TargetTrackingScaling",
+    "ScalingTargetId": {
+     "Ref": "OrderFargateServiceTaskCountTarget6381FA3D"
+    },
+    "TargetTrackingScalingPolicyConfiguration": {
+     "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+     },
+     "ScaleInCooldown": 60,
+     "ScaleOutCooldown": 60,
+     "TargetValue": 60
+    }
+   },
+   "DependsOn": [
+    "OrderApplicationTaskRoleDefaultPolicyDC516CB2",
+    "OrderApplicationTaskRole5658F148"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderFargateService/TaskCount/Target/OrderCpuTargetTracking/Resource"
+   }
+  },
+  "OrderVpcLinkC99AF62B": {
+   "Type": "AWS::ApiGatewayV2::VpcLink",
+   "Properties": {
+    "Name": "smartretailx-order-dev-vpc-link",
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "VpcLinkSecurityGroupB3941EDC",
+       "GroupId"
+      ]
+     }
+    ],
+    "SubnetIds": [
+     {
+      "Ref": "OrderVpcPublicSubnet1Subnet325BA510"
+     },
+     {
+      "Ref": "OrderVpcPublicSubnet2SubnetEFC000C9"
+     }
+    ],
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderVpcLink/Resource"
+   }
+  },
+  "OrderApiAccessLogGroupEB70A8CC": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/apigateway/smartretailx-order-dev",
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Module",
+      "Value": "COMP60010"
+     },
+     {
+      "Key": "Owner",
+      "Value": "SmartRetailX"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderApiAccessLogGroup/Resource"
+   }
+  },
+  "OrderHttpApiAB27C1F1": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "CorsConfiguration": {
+     "AllowHeaders": [
+      "Authorization",
+      "Content-Type"
+     ],
+     "AllowMethods": [
+      "GET",
+      "POST",
+      "OPTIONS"
+     ],
+     "AllowOrigins": [
+      "http://localhost:5173",
+      {
+       "Fn::Join": [
+        "",
+        [
+         "https://",
+         {
+          "Fn::ImportValue": "SmartRetailX-dev-Frontend:ExportsOutputFnGetAttFrontendDistributionE6EAF405DomainNameBCB0DC7A"
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    "Description": "SmartRetailX authenticated Order HTTP API",
+    "Name": "smartretailx-order-api-dev",
+    "ProtocolType": "HTTP",
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderHttpApi/Resource"
+   }
+  },
+  "OrderHttpApiGETapiv1ordersOrderAlbIntegration744C46CE": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "OrderHttpApiAB27C1F1"
+    },
+    "ConnectionId": {
+     "Ref": "OrderVpcLinkC99AF62B"
+    },
+    "ConnectionType": "VPC_LINK",
+    "IntegrationMethod": "ANY",
+    "IntegrationType": "HTTP_PROXY",
+    "IntegrationUri": {
+     "Ref": "OrderLoadBalancerOrderHttpListenerD64D62E0"
+    },
+    "PayloadFormatVersion": "1.0",
+    "RequestParameters": {
+     "overwrite:path": "$request.path"
+    },
+    "TimeoutInMillis": 29000
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderHttpApi/GET--api--v1--orders/OrderAlbIntegration/Resource"
+   }
+  },
+  "OrderHttpApiGETapiv1orders381B88A9": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "OrderHttpApiAB27C1F1"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "OrderHttpApiOrderJwtAuthorizerA94F8774"
+    },
+    "RouteKey": "GET /api/v1/orders",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "OrderHttpApiGETapiv1ordersOrderAlbIntegration744C46CE"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderHttpApi/GET--api--v1--orders/Resource"
+   }
+  },
+  "OrderHttpApiOrderJwtAuthorizerA94F8774": {
+   "Type": "AWS::ApiGatewayV2::Authorizer",
+   "Properties": {
+    "ApiId": {
+     "Ref": "OrderHttpApiAB27C1F1"
+    },
+    "AuthorizerType": "JWT",
+    "IdentitySource": [
+     "$request.header.Authorization"
+    ],
+    "JwtConfiguration": {
+     "Audience": [
+      {
+       "Fn::ImportValue": "SmartRetailX-dev-Auth:ExportsOutputRefUserPoolWebUserPoolClient4FD9D8952A984FBB"
+      }
+     ],
+     "Issuer": {
+      "Fn::ImportValue": "SmartRetailX-dev-Auth:ExportsOutputFnGetAttUserPool6BA7E5F2ProviderURL1DC61701"
+     }
+    },
+    "Name": "smartretailx-order-dev-jwt-authorizer"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderHttpApi/OrderJwtAuthorizer/Resource"
+   }
+  },
+  "OrderHttpApiPOSTapiv1orders89BA9D1F": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "OrderHttpApiAB27C1F1"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "OrderHttpApiOrderJwtAuthorizerA94F8774"
+    },
+    "RouteKey": "POST /api/v1/orders",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "OrderHttpApiGETapiv1ordersOrderAlbIntegration744C46CE"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderHttpApi/POST--api--v1--orders/Resource"
+   }
+  },
+  "OrderHttpApiGETapiv1ordersorderId119AE306": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "OrderHttpApiAB27C1F1"
+    },
+    "AuthorizationScopes": [
+     "openid"
+    ],
+    "AuthorizationType": "JWT",
+    "AuthorizerId": {
+     "Ref": "OrderHttpApiOrderJwtAuthorizerA94F8774"
+    },
+    "RouteKey": "GET /api/v1/orders/{orderId}",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "OrderHttpApiGETapiv1ordersOrderAlbIntegration744C46CE"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderHttpApi/GET--api--v1--orders--{orderId}/Resource"
+   }
+  },
+  "OrderDefaultStage2711EDF0": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "AccessLogSettings": {
+     "DestinationArn": {
+      "Fn::GetAtt": [
+       "OrderApiAccessLogGroupEB70A8CC",
+       "Arn"
+      ]
+     },
+     "Format": "{\"integrationErrorMessage\":\"$context.integrationErrorMessage\",\"integrationLatency\":\"$context.integrationLatency\",\"requestId\":\"$context.requestId\",\"requestTime\":\"$context.requestTime\",\"responseLength\":\"$context.responseLength\",\"routeKey\":\"$context.routeKey\",\"sourceIp\":\"$context.identity.sourceIp\",\"status\":\"$context.status\"}"
+    },
+    "ApiId": {
+     "Ref": "OrderHttpApiAB27C1F1"
+    },
+    "AutoDeploy": true,
+    "StageName": "$default",
+    "Tags": {
+     "Environment": "dev",
+     "ManagedBy": "CDK",
+     "Module": "COMP60010",
+     "Owner": "SmartRetailX",
+     "Project": "SmartRetailX"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/OrderDefaultStage/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31SwW7bMAz9lt4VrfOG3dNs6woEWBAHvQ60zKpsFMqQqGSZ4X8fZCVx0gE78fHxSaSeWOnqyyd9fweHODPtduao0X0tYLYKDvFXj6bS/XNn1OKFn1cLtUqNI1OnhlEyN6G1T4IbaBxO/MTNY/SGQMjzRZzBEwsGRnkEwQMcT21O2VwEzOsOWVSNJgWS42PwqRsb/Jf4ZgPG+A/9xCM/KDRR9wuXomDIqjP8DsFCHjluv+ILMZ0Hfs94FiDGcMUtidPvFQTYoWCI57tqDHsyxZQTrA24bEq+dOETy6Cct1H3S28v7znjQRHsdL/2xdgxrrwjM5pV0KDaI8POt40e3X6AiAodRCHjPLQNOGBDbPeV7udd58iMX7H00D6MtWLDTX6toyjIJ80ZX9U3ECzKZfSrdFAwySCJjwYcsdX9ZEIWj/bcMiVsApgtsa3LuenlN0RuQ7Zszb5s7JJ4O67TCf4Q6eYdZSqHnJYtzCivoQ2X9XyXTrp5klcf6E+x4irLxVrAln/OYBjUGqNPofz9zyRdkkGxb1G/xQ/7qtIfP+v7u7dINAuJhXao1yX+BTOft7GWAwAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-OrderService/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "OrderApiUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "OrderHttpApiAB27C1F1"
+      },
+      ".execute-api.",
+      {
+       "Ref": "AWS::Region"
+      },
+      ".",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "OrderApiId": {
+   "Value": {
+    "Ref": "OrderHttpApiAB27C1F1"
+   }
+  },
+  "OrderClusterName": {
+   "Value": {
+    "Ref": "OrderClusterB8E5F262"
+   }
+  },
+  "OrderServiceName": {
+   "Value": {
+    "Fn::GetAtt": [
+     "OrderFargateServiceC016F029",
+     "Name"
+    ]
+   }
+  },
+  "OrderTaskDefinitionFamily": {
+   "Value": "smartretailx-order-dev"
+  },
+  "OrderInternalAlbDnsName": {
+   "Description": "Internal operator-only ALB DNS name; this is not the public API URL.",
+   "Value": {
+    "Fn::GetAtt": [
+     "OrderLoadBalancer7265D7F7",
+     "DNSName"
+    ]
+   }
+  },
+  "OrderVpcId": {
+   "Value": {
+    "Ref": "OrderVpc494511AA"
+   }
+  },
+  "OrderContainerLogGroupName": {
+   "Value": {
+    "Ref": "OrderContainerLogGroup17EBFC0C"
+   }
+  },
+  "OrderApiAccessLogGroupName": {
+   "Value": {
+    "Ref": "OrderApiAccessLogGroupEB70A8CC"
+   }
+  },
+  "OrderImageTag": {
+   "Value": "15c8a5667ef256ed95833a69c3bf2c8b12246805"
+  },
+  "ExportsOutputRefOrderClusterB8E5F262A6757E5E": {
+   "Value": {
+    "Ref": "OrderClusterB8E5F262"
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-OrderService:ExportsOutputRefOrderClusterB8E5F262A6757E5E"
+   }
+  },
+  "ExportsOutputFnGetAttOrderFargateServiceC016F029Name4A4B45F3": {
+   "Value": {
+    "Fn::GetAtt": [
+     "OrderFargateServiceC016F029",
+     "Name"
+    ]
+   },
+   "Export": {
+    "Name": "SmartRetailX-dev-OrderService:ExportsOutputFnGetAttOrderFargateServiceC016F029Name4A4B45F3"
+   }
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

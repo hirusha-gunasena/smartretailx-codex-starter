@@ -1,0 +1,1138 @@
+{
+ "Description": "SmartRetailX System-wide CloudWatch Dashboard",
+ "Resources": {
+  "SystemDashboard4D010539": {
+   "Type": "AWS::CloudWatch::Dashboard",
+   "Properties": {
+    "DashboardBody": {
+     "Fn::Join": [
+      "",
+      [
+       "{\"start\":\"-PT1H\",\"widgets\":[{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Total Lambda Errors\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[{\"label\":\"Errors\",\"expression\":\"SEARCH('{AWS/Lambda,FunctionName} FunctionName=\\\"smartretailx-\\\" MetricName=\\\"Errors\\\"', 'Sum', 300)\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":12,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Total Lambda Invocations\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[{\"label\":\"Invocations\",\"expression\":\"SEARCH('{AWS/Lambda,FunctionName} FunctionName=\\\"smartretailx-\\\" MetricName=\\\"Invocations\\\"', 'Sum', 300)\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":8,\"height\":6,\"x\":0,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Catalogue Service\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Catalogue:ExportsOutputRefCatalogueFunction701D9D68BC006F2A"
+       },
+       "\",{\"label\":\"Catalogue Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Catalogue:ExportsOutputRefCatalogueFunction701D9D68BC006F2A"
+       },
+       "\",{\"label\":\"Catalogue Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Catalogue:ExportsOutputRefCatalogueFunction701D9D68BC006F2A"
+       },
+       "\",{\"label\":\"Catalogue Dur\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":8,\"height\":6,\"x\":8,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Inventory Service\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D"
+       },
+       "\",{\"label\":\"InvAPI Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D"
+       },
+       "\",{\"label\":\"InvAPI Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D"
+       },
+       "\",{\"label\":\"InvAPI Dur\"}],[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryConsumerFunction64DA194838F83E12"
+       },
+       "\",{\"label\":\"InvCons Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryConsumerFunction64DA194838F83E12"
+       },
+       "\",{\"label\":\"InvCons Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryConsumerFunction64DA194838F83E12"
+       },
+       "\",{\"label\":\"InvCons Dur\"}],[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F"
+       },
+       "\",{\"label\":\"InvRelay Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F"
+       },
+       "\",{\"label\":\"InvRelay Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F"
+       },
+       "\",{\"label\":\"InvRelay Dur\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":8,\"height\":6,\"x\":16,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Order Events & Workflow\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventRelayFunctionED971BF271ECED47"
+       },
+       "\",{\"label\":\"OrdRelay Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventRelayFunctionED971BF271ECED47"
+       },
+       "\",{\"label\":\"OrdRelay Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventRelayFunctionED971BF271ECED47"
+       },
+       "\",{\"label\":\"OrdRelay Dur\"}],[\"AWS/Lambda\",\"Invocations\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputRefOrderWorkflowFunctionFCE821D40A0897AA"
+       },
+       "\",{\"label\":\"OrdWork Invs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Errors\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputRefOrderWorkflowFunctionFCE821D40A0897AA"
+       },
+       "\",{\"label\":\"OrdWork Errs\",\"stat\":\"Sum\"}],[\"AWS/Lambda\",\"Duration\",\"FunctionName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputRefOrderWorkflowFunctionFCE821D40A0897AA"
+       },
+       "\",{\"label\":\"OrdWork Dur\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":24,\"height\":6,\"x\":0,\"y\":12,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Order Service ECS Utilization\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/ECS\",\"CPUUtilization\",\"ClusterName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputRefOrderClusterB8E5F262A6757E5E"
+       },
+       "\",\"ServiceName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputFnGetAttOrderFargateServiceC016F029Name4A4B45F3"
+       },
+       "\",{\"label\":\"CPU Utilization\"}],[\"AWS/ECS\",\"MemoryUtilization\",\"ClusterName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputRefOrderClusterB8E5F262A6757E5E"
+       },
+       "\",\"ServiceName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputFnGetAttOrderFargateServiceC016F029Name4A4B45F3"
+       },
+       "\",{\"label\":\"Memory Utilization\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":18,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Inventory Queue Backlog\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/SQS\",\"ApproximateNumberOfMessagesVisible\",\"QueueName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputFnGetAttInventoryQueueB99B90CBQueueNameBE2BD1D3"
+       },
+       "\",{\"label\":\"Visible Messages\",\"stat\":\"Maximum\"}],[\"AWS/SQS\",\"ApproximateAgeOfOldestMessage\",\"QueueName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputFnGetAttInventoryQueueB99B90CBQueueNameBE2BD1D3"
+       },
+       "\",{\"label\":\"Oldest Message Age (s)\",\"stat\":\"Maximum\",\"yAxis\":\"right\"}]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":12,\"y\":18,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Order Workflow Queue Backlog\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/SQS\",\"ApproximateNumberOfMessagesVisible\",\"QueueName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputFnGetAttOrderWorkflowQueue62B5DA5BQueueNameA793F5D2"
+       },
+       "\",{\"label\":\"Visible Messages\",\"stat\":\"Maximum\"}],[\"AWS/SQS\",\"ApproximateAgeOfOldestMessage\",\"QueueName\",\"",
+       {
+        "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputFnGetAttOrderWorkflowQueue62B5DA5BQueueNameA793F5D2"
+       },
+       "\",{\"label\":\"Oldest Message Age (s)\",\"stat\":\"Maximum\",\"yAxis\":\"right\"}]],\"yAxis\":{}}},{\"type\":\"alarm\",\"width\":24,\"height\":3,\"x\":0,\"y\":24,\"properties\":{\"title\":\"System Alarms Status\",\"alarms\":[\"",
+       {
+        "Fn::GetAtt": [
+         "CatalogueErrorsAlarm9483AA3A",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "InvAPIErrorsAlarm0EA8D9D7",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "InvConsErrorsAlarm1ACA54F8",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "InvRelayErrorsAlarmB1334559",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "OrdRelayErrorsAlarm787BC32D",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "OrdWorkErrorsAlarm89976364",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "OrderServiceCpuAlarm3695E431",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "OrderServiceMemoryAlarmF05CBB26",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "InventoryQueueAgeAlarm0E1DE8D6",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "WorkflowQueueAgeAlarm9A08463A",
+         "Arn"
+        ]
+       },
+       "\"]}}]}"
+      ]
+     ]
+    },
+    "DashboardName": "SmartRetailX-dev-SystemDashboard",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/SystemDashboard/Resource"
+   }
+  },
+  "SystemAlarmsTopicCD182B4E": {
+   "Type": "AWS::SNS::Topic",
+   "Properties": {
+    "DisplayName": "SmartRetailX dev System Alarms",
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/SystemAlarmsTopic/Resource"
+   }
+  },
+  "CatalogueErrorsAlarm9483AA3A": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-Catalogue-Errors",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "Catalogue Errs",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "FunctionName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-Catalogue:ExportsOutputRefCatalogueFunction701D9D68BC006F2A"
+          }
+         }
+        ],
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/CatalogueErrorsAlarm/Resource"
+   }
+  },
+  "InvAPIErrorsAlarm0EA8D9D7": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-InvAPI-Errors",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "InvAPI Errs",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "FunctionName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryApiFunctionA4136AD0763A8F1D"
+          }
+         }
+        ],
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/InvAPIErrorsAlarm/Resource"
+   }
+  },
+  "InvConsErrorsAlarm1ACA54F8": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-InvCons-Errors",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "InvCons Errs",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "FunctionName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryConsumerFunction64DA194838F83E12"
+          }
+         }
+        ],
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/InvConsErrorsAlarm/Resource"
+   }
+  },
+  "InvRelayErrorsAlarmB1334559": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-InvRelay-Errors",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "InvRelay Errs",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "FunctionName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputRefInventoryOutcomeRelayFunctionA312C69F9807425F"
+          }
+         }
+        ],
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/InvRelayErrorsAlarm/Resource"
+   }
+  },
+  "OrdRelayErrorsAlarm787BC32D": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-OrdRelay-Errors",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "OrdRelay Errs",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "FunctionName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-OrderEvents:ExportsOutputRefOrderEventRelayFunctionED971BF271ECED47"
+          }
+         }
+        ],
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/OrdRelayErrorsAlarm/Resource"
+   }
+  },
+  "OrdWorkErrorsAlarm89976364": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-OrdWork-Errors",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "OrdWork Errs",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "FunctionName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputRefOrderWorkflowFunctionFCE821D40A0897AA"
+          }
+         }
+        ],
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda"
+       },
+       "Period": 300,
+       "Stat": "Sum"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/OrdWorkErrorsAlarm/Resource"
+   }
+  },
+  "OrderServiceCpuAlarm3695E431": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-OrderService-CPU",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "CPU Utilization",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "ClusterName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputRefOrderClusterB8E5F262A6757E5E"
+          }
+         },
+         {
+          "Name": "ServiceName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputFnGetAttOrderFargateServiceC016F029Name4A4B45F3"
+          }
+         }
+        ],
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/ECS"
+       },
+       "Period": 300,
+       "Stat": "Average"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 80
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/OrderServiceCpuAlarm/Resource"
+   }
+  },
+  "OrderServiceMemoryAlarmF05CBB26": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-OrderService-Memory",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "Memory Utilization",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "ClusterName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputRefOrderClusterB8E5F262A6757E5E"
+          }
+         },
+         {
+          "Name": "ServiceName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-OrderService:ExportsOutputFnGetAttOrderFargateServiceC016F029Name4A4B45F3"
+          }
+         }
+        ],
+        "MetricName": "MemoryUtilization",
+        "Namespace": "AWS/ECS"
+       },
+       "Period": 300,
+       "Stat": "Average"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 80
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/OrderServiceMemoryAlarm/Resource"
+   }
+  },
+  "InventoryQueueAgeAlarm0E1DE8D6": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-InventoryQueue-Age",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "Oldest Message Age (s)",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "QueueName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-Inventory:ExportsOutputFnGetAttInventoryQueueB99B90CBQueueNameBE2BD1D3"
+          }
+         }
+        ],
+        "MetricName": "ApproximateAgeOfOldestMessage",
+        "Namespace": "AWS/SQS"
+       },
+       "Period": 300,
+       "Stat": "Maximum"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 300
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/InventoryQueueAgeAlarm/Resource"
+   }
+  },
+  "WorkflowQueueAgeAlarm9A08463A": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmActions": [
+     {
+      "Ref": "SystemAlarmsTopicCD182B4E"
+     }
+    ],
+    "AlarmName": "SmartRetailX-dev-WorkflowQueue-Age",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "EvaluationPeriods": 1,
+    "Metrics": [
+     {
+      "Id": "m1",
+      "Label": "Oldest Message Age (s)",
+      "MetricStat": {
+       "Metric": {
+        "Dimensions": [
+         {
+          "Name": "QueueName",
+          "Value": {
+           "Fn::ImportValue": "SmartRetailX-dev-OrderWorkflow:ExportsOutputFnGetAttOrderWorkflowQueue62B5DA5BQueueNameA793F5D2"
+          }
+         }
+        ],
+        "MetricName": "ApproximateAgeOfOldestMessage",
+        "Namespace": "AWS/SQS"
+       },
+       "Period": 300,
+       "Stat": "Maximum"
+      },
+      "ReturnData": true
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ManagedBy",
+      "Value": "CDK"
+     },
+     {
+      "Key": "Project",
+      "Value": "SmartRetailX"
+     }
+    ],
+    "Threshold": 300
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/WorkflowQueueAgeAlarm/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/0XIsQ7CIBSF4WfpDtdKjbvR3UTdm1uoKS2FhgsyEN7dUAen851fgDh30DaYiEu1cKMHyM+AcmGYqM/SuKgSBjlBviFNg0Ov2PVt/+di0K817SiMLEF+uU3LGneUUnmPYYuhMOvUCDMdPkLA8QRtM5PW3Ecb9DrC47dfdpQwwJkAAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "SmartRetailX-dev-Observability/CDKMetadata/Default"
+   },
+   "Condition": "CDKMetadataAvailable"
+  }
+ },
+ "Outputs": {
+  "DashboardName": {
+   "Value": "SmartRetailX-dev-SystemDashboard"
+  }
+ },
+ "Conditions": {
+  "CDKMetadataAvailable": {
+   "Fn::Or": [
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "af-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-northeast-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-south-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-3"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ap-southeast-4"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "ca-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "cn-northwest-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-central-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-north-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-south-2"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Or": [
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "eu-west-3"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "il-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-central-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "me-south-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "sa-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-1"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-east-2"
+       ]
+      },
+      {
+       "Fn::Equals": [
+        {
+         "Ref": "AWS::Region"
+        },
+        "us-west-1"
+       ]
+      }
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "us-west-2"
+     ]
+    }
+   ]
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
