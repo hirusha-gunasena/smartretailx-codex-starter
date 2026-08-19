@@ -33,6 +33,7 @@ const findRepositoryRoot = (startPath: string): string => {
 export class OrderEventsStack extends cdk.Stack {
   public readonly eventBus: events.EventBus;
   public readonly ordersTable: dynamodb.TableV2;
+  public readonly orderEventRelayFunction: nodejs.NodejsFunction;
 
   public constructor(scope: Construct, id: string, props: OrderEventsStackProps) {
     super(scope, id, props);
@@ -148,6 +149,7 @@ export class OrderEventsStack extends cdk.Stack {
         },
       },
     });
+    this.orderEventRelayFunction = relayFunction;
 
     this.eventBus.grantPutEventsTo(relayFunction);
     ordersTable.grantStreamRead(relayFunction);

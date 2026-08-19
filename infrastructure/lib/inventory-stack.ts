@@ -40,6 +40,11 @@ const findRepositoryRoot = (startPath: string): string => {
 };
 
 export class InventoryStack extends cdk.Stack {
+  public readonly inventoryConsumerFunction: nodejs.NodejsFunction;
+  public readonly inventoryOutcomeRelayFunction: nodejs.NodejsFunction;
+  public readonly inventoryApiFunction: nodejs.NodejsFunction;
+  public readonly inventoryQueue: sqs.Queue;
+
   public constructor(scope: Construct, id: string, props: InventoryStackProps) {
     super(scope, id, props);
 
@@ -110,6 +115,7 @@ export class InventoryStack extends cdk.Stack {
       },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
+    this.inventoryQueue = inventoryQueue;
 
     const outcomeRelayFailureDeadLetterQueue = new sqs.Queue(
       this,
@@ -184,6 +190,7 @@ export class InventoryStack extends cdk.Stack {
         },
       },
     });
+    this.inventoryConsumerFunction = inventoryConsumer;
 
     inventoryConsumer.addToRolePolicy(
       new iam.PolicyStatement({
@@ -249,6 +256,7 @@ export class InventoryStack extends cdk.Stack {
         },
       },
     });
+    this.inventoryOutcomeRelayFunction = inventoryOutcomeRelay;
 
     props.orderEventBus.grantPutEventsTo(inventoryOutcomeRelay);
     reservationsTable.grantStreamRead(inventoryOutcomeRelay);
@@ -304,6 +312,7 @@ export class InventoryStack extends cdk.Stack {
         target: 'node22',
       },
     });
+    this.inventoryApiFunction = inventoryApiFunction;
 
     inventoryApiFunction.addToRolePolicy(
       new iam.PolicyStatement({

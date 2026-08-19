@@ -12,6 +12,7 @@ import { OrderEventsStack } from '../lib/order-events-stack.js';
 import { OrderRegistryStack } from '../lib/order-registry-stack.js';
 import { OrderServiceStack } from '../lib/order-service-stack.js';
 import { OrderWorkflowStack } from '../lib/order-workflow-stack.js';
+import { ObservabilityStack } from '../lib/observability-stack.js';
 
 import { FrontendStack } from '../lib/frontend-stack.js';
 
@@ -44,7 +45,7 @@ const authStack = new AuthStack(app, `${projectName}-${environment}-Auth`, {
   cloudFrontDomain: frontendStack.cloudFrontDomain,
 });
 
-new CatalogueStack(app, `${projectName}-${environment}-Catalogue`, {
+const catalogueStack = new CatalogueStack(app, `${projectName}-${environment}-Catalogue`, {
   description: 'SmartRetailX Product Catalogue infrastructure',
   projectName,
   environmentName: environment,
@@ -72,7 +73,7 @@ const orderRegistryStack = new OrderRegistryStack(
   },
 );
 
-new OrderServiceStack(app, `${projectName}-${environment}-OrderService`, {
+const orderServiceStack = new OrderServiceStack(app, `${projectName}-${environment}-OrderService`, {
   description: 'SmartRetailX authenticated private Order ECS Fargate service',
   projectName,
   environmentName: environment,
@@ -86,7 +87,7 @@ new OrderServiceStack(app, `${projectName}-${environment}-OrderService`, {
   ],
 });
 
-new InventoryStack(app, `${projectName}-${environment}-Inventory`, {
+const inventoryStack = new InventoryStack(app, `${projectName}-${environment}-Inventory`, {
   description: 'SmartRetailX Inventory consumer and outcome relay infrastructure',
   projectName,
   environmentName: environment,
@@ -99,10 +100,21 @@ new InventoryStack(app, `${projectName}-${environment}-Inventory`, {
   ],
 });
 
-new OrderWorkflowStack(app, `${projectName}-${environment}-OrderWorkflow`, {
+const orderWorkflowStack = new OrderWorkflowStack(app, `${projectName}-${environment}-OrderWorkflow`, {
   description: 'SmartRetailX Order inventory-outcome Saga consumer infrastructure',
   projectName,
   environmentName: environment,
   eventBus: orderEventsStack.eventBus,
   ordersTable: orderEventsStack.ordersTable,
+});
+
+new ObservabilityStack(app, `${projectName}-${environment}-Observability`, {
+  description: 'SmartRetailX System-wide CloudWatch Dashboard',
+  projectName,
+  environmentName: environment,
+  catalogueStack,
+  inventoryStack,
+  orderEventsStack,
+  orderServiceStack,
+  orderWorkflowStack,
 });

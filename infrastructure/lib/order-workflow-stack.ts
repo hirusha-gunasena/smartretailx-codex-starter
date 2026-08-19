@@ -35,6 +35,9 @@ const findRepositoryRoot = (startPath: string): string => {
 };
 
 export class OrderWorkflowStack extends cdk.Stack {
+  public readonly workflowQueue: sqs.Queue;
+  public readonly orderWorkflowFunction: nodejs.NodejsFunction;
+
   public constructor(scope: Construct, id: string, props: OrderWorkflowStackProps) {
     super(scope, id, props);
 
@@ -66,6 +69,7 @@ export class OrderWorkflowStack extends cdk.Stack {
       },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
+    this.workflowQueue = workflowQueue;
 
     const workflowLogGroup = new logs.LogGroup(this, 'OrderWorkflowLogGroup', {
       logGroupName: `/aws/lambda/${workflowFunctionName}`,
@@ -111,6 +115,7 @@ export class OrderWorkflowStack extends cdk.Stack {
         },
       },
     });
+    this.orderWorkflowFunction = workflowFunction;
 
     workflowFunction.addToRolePolicy(
       new iam.PolicyStatement({

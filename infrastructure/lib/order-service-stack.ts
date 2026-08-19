@@ -30,6 +30,8 @@ const ORDER_VPC_CIDR = '10.24.0.0/16';
 const CUSTOMER_ORDERS_INDEX_NAME = 'customerId-createdAt-index';
 
 export class OrderServiceStack extends cdk.Stack {
+  public readonly orderService: ecs.FargateService;
+
   public constructor(scope: Construct, id: string, props: OrderServiceStackProps) {
     super(scope, id, props);
 
@@ -236,6 +238,7 @@ export class OrderServiceStack extends cdk.Stack {
       maxHealthyPercent: 200,
     });
     service.attachToApplicationTargetGroup(targetGroup);
+    this.orderService = service;
 
     const scalableTaskCount = service.autoScaleTaskCount({
       minCapacity: 1,

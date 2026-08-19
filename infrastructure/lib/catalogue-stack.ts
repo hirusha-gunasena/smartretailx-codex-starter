@@ -36,6 +36,9 @@ const findRepositoryRoot = (startPath: string): string => {
 };
 
 export class CatalogueStack extends cdk.Stack {
+  public readonly catalogueFunction: nodejs.NodejsFunction;
+  public readonly catalogueApi: apigatewayv2.HttpApi;
+
   public constructor(scope: Construct, id: string, props: CatalogueStackProps) {
     super(scope, id, props);
 
@@ -125,6 +128,7 @@ export class CatalogueStack extends cdk.Stack {
         },
       },
     });
+    this.catalogueFunction = catalogueFunction;
 
     catalogueFunction.addToRolePolicy(
       new iam.PolicyStatement({
@@ -163,6 +167,7 @@ export class CatalogueStack extends cdk.Stack {
         ],
       },
     });
+    this.catalogueApi = catalogueApi;
 
     const catalogueAuthorizer = new HttpJwtAuthorizer(
       'CatalogueJwtAuthorizer',
