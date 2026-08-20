@@ -1,35 +1,28 @@
 # Final Regression Summary
 
-This folder contains a comprehensive breakdown of the system state for the SmartRetailX codex assessment.
+This folder contains a comprehensive breakdown of the system state for the SmartRetailX Codex assessment.
 
 ## Test Results
 
-- **Unit Tests (`01-unit-tests`)**: 
-  - **Status**: ✅ PASS
-  - **Results**: 93 passed, 0 failed across 9 test suites.
-  - **Coverage**: Executed via Jest across all domain packages.
-- **Integration/E2E Tests (`02-integration-tests`, `03-postman`)**: 
-  - **Status**: ⚠️ PENDING DEPLOYMENT
-  - **Results**: Executed Postman collection via newman. 5 requests failed due to `ENOTFOUND` (endpoints pending DNS resolution/deployment). 
-- **Performance Tests (`09-performance-k6`)**: 
-  - **Status**: ⚠️ PENDING DEPLOYMENT
-  - **Results**: Baseline k6 script executed with 5 VUs. Requests failed with connection errors (endpoints pending DNS resolution/deployment).
+- **Automated local tests**: PASS — 589 tests across 53 Jest/Vitest suites and files.
+- **Integration/E2E evidence (`02-integration-tests`, `03-postman`)**: INVALID — RERUN REQUIRED. Five Newman requests failed with `ENOTFOUND`; those failures do not demonstrate a working live endpoint.
+- **Performance evidence (`09-performance-k6`)**: INVALID — RERUN REQUIRED. The recorded k6 requests failed during DNS resolution or connection setup, so no latency, throughput, or error-rate conclusion can be drawn.
 
 ## Observability & Resilience
 
-- **Observability (`10-observability`)**: CloudWatch System Dashboard capturing Lambda Errors, SQS Backlogs, and ECS utilization.
-- **Resilience (`08-resilience-dr`)**: 
-  - DynamoDB Tables configured with `PointInTimeRecovery` (PITR).
-  - ECS Fargate services deployed across multiple AZs.
+- **Observability (`10-observability`)**: The CloudWatch system dashboard captures Lambda errors, SQS backlogs, and ECS utilization. The checked six-hour X-Ray window contained no traces.
+- **Resilience (`08-resilience-dr`)**:
+  - The live Orders table currently has point-in-time recovery disabled. Enabling it requires a separately reviewed CDK change and cost approval.
+  - The OrderService VPC spans two Availability Zones, but the ECS service currently has a desired count of one. This is not evidence of multi-task high availability.
 
 ## Security
 
 - **Security (`11-security`)**:
-  - Validated via `npm audit`.
-  - IAM least-privilege roles defined across all CDK stacks.
-- **Auth/RBAC (`04-auth-rbac`)**: AWS Cognito User Pools configured for implicit flow with JWT validation at the API Gateway.
+  - `npm audit` currently reports one high-severity transitive finding in `brace-expansion` through `aws-cdk-lib`; no forced dependency update was applied.
+  - IAM least-privilege roles are defined across the CDK stacks.
+- **Auth/RBAC (`04-auth-rbac`)**: AWS Cognito User Pools use Authorization Code with PKCE, with JWT validation at the application boundary.
 
 ## Architecture
 
-- **Event Processing (`07-event-processing`)**: Event-driven choreography managed via AWS EventBridge and SQS queues.
-- **Infrastructure (`12-cdk-infrastructure`)**: Fully automated IaC deployment via AWS CDK v2.
+- **Event Processing (`07-event-processing`)**: Event-driven choreography is managed through AWS EventBridge and SQS queues.
+- **Infrastructure (`12-cdk-infrastructure`)**: Infrastructure is defined with AWS CDK v2 and deployed through CloudFormation.

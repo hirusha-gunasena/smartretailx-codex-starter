@@ -18,3 +18,4 @@ cdk.out/
 *.tfstate.*
 reports/
 scratch/
+evidence/screenshots.zip
