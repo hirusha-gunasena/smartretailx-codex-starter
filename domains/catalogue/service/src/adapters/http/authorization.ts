@@ -180,39 +180,18 @@ export const normalizeCognitoGroups = (rawClaim: unknown): GroupNormalizationRes
   }
 
   const serializedGroups = rawClaim as string;
-  let parsedGroups: unknown[];
-
-  if (serializedGroups.startsWith('[') && serializedGroups.endsWith(']')) {
-    try {
-      parsedGroups = JSON.parse(serializedGroups);
-      if (!Array.isArray(parsedGroups)) {
-        return invalidGroups(claimType, 'MALFORMED');
-      }
-    } catch {
-      // Fallback for manually constructed bracketed strings without valid JSON quotes
-      const content = serializedGroups.slice(1, -1).trim();
-      if (content.length === 0) {
-        return invalidGroups(claimType, 'EMPTY');
-      }
-      parsedGroups = content.split(',').map((group) => {
-        let g = group.trim();
-        if ((g.startsWith('"') && g.endsWith('"')) || (g.startsWith("'") && g.endsWith("'"))) {
-          g = g.slice(1, -1);
-        }
-        return g;
-      });
-    }
-  } else {
-    // Fallback for API Gateway's comma-separated format
-    const content = serializedGroups.trim();
-    if (content.length === 0) {
-      return invalidGroups(claimType, 'EMPTY');
-    }
-    parsedGroups = content.split(',').map((group) => group.trim());
+  if (!serializedGroups.startsWith('[') || !serializedGroups.endsWith(']')) {
+    return invalidGroups(claimType, 'MALFORMED');
   }
 
-  if (parsedGroups.length === 0) {
+  const content = serializedGroups.slice(1, -1).trim();
+  if (content.length === 0) {
     return invalidGroups(claimType, 'EMPTY');
+  }
+
+  const parsedGroups = content.split(',').map((group) => group.trim());
+  if (parsedGroups.some((group) => /["']/u.test(group))) {
+    return invalidGroups(claimType, 'MALFORMED');
   }
 
   return normalizeGroupValues(parsedGroups, claimType);

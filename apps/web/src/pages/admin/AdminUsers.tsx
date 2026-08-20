@@ -18,7 +18,11 @@ export const AdminUsers: React.FC = () => {
   }, []);
 
   if (loading) {
-    return <div className="text-center py-20 text-sm uppercase tracking-wider text-gray-400">Loading users...</div>;
+    return (
+      <div className="text-center py-20 text-sm uppercase tracking-wider text-gray-400">
+        Loading users...
+      </div>
+    );
   }
 
   return (
@@ -38,10 +42,18 @@ export const AdminUsers: React.FC = () => {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">ID / Username</th>
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Email</th>
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">Created</th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  ID / Username
+                </th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Email
+                </th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Status
+                </th>
+                <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Created
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -50,16 +62,22 @@ export const AdminUsers: React.FC = () => {
                   <td className="p-4 text-xs font-mono text-gray-400">{user.id}</td>
                   <td className="p-4 font-semibold text-sm text-gray-900">{user.email || 'N/A'}</td>
                   <td className="p-4 text-sm">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    <span
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${user.enabled ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                    >
                       {user.status}
                     </span>
                   </td>
-                  <td className="p-4 text-sm text-gray-500">{new Date(user.created).toLocaleDateString()}</td>
+                  <td className="p-4 text-sm text-gray-500">
+                    {new Date(user.created).toLocaleDateString()}
+                  </td>
                 </tr>
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-500 text-sm">No users found.</td>
+                  <td colSpan={4} className="p-8 text-center text-gray-500 text-sm">
+                    No users found.
+                  </td>
                 </tr>
               )}
             </tbody>

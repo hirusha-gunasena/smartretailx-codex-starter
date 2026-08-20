@@ -100,13 +100,17 @@ const inventoryStack = new InventoryStack(app, `${projectName}-${environment}-In
   ],
 });
 
-const orderWorkflowStack = new OrderWorkflowStack(app, `${projectName}-${environment}-OrderWorkflow`, {
-  description: 'SmartRetailX Order inventory-outcome Saga consumer infrastructure',
-  projectName,
-  environmentName: environment,
-  eventBus: orderEventsStack.eventBus,
-  ordersTable: orderEventsStack.ordersTable,
-});
+const orderWorkflowStack = new OrderWorkflowStack(
+  app,
+  `${projectName}-${environment}-OrderWorkflow`,
+  {
+    description: 'SmartRetailX Order inventory-outcome Saga consumer infrastructure',
+    projectName,
+    environmentName: environment,
+    eventBus: orderEventsStack.eventBus,
+    ordersTable: orderEventsStack.ordersTable,
+  },
+);
 
 new ObservabilityStack(app, `${projectName}-${environment}-Observability`, {
   description: 'SmartRetailX System-wide CloudWatch Dashboard',

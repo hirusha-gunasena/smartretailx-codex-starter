@@ -11,7 +11,7 @@ export const options = {
     { duration: '5m', target: 300 },
     { duration: '2m', target: 400 }, // beyond breaking point
     { duration: '5m', target: 400 },
-    { duration: '5m', target: 0 },   // scale down
+    { duration: '5m', target: 0 }, // scale down
   ],
   thresholds: {
     http_req_duration: ['p(95)<2000'],

@@ -80,7 +80,14 @@ export class OrderWorkflowStack extends cdk.Stack {
     const workflowFunction = new nodejs.NodejsFunction(this, 'OrderWorkflowFunction', {
       functionName: workflowFunctionName,
       description: 'SmartRetailX Order Inventory Outcome Saga Consumer',
-      entry: join(repositoryRoot, 'domains', 'order', 'service', 'src', 'order-workflow-handler.ts'),
+      entry: join(
+        repositoryRoot,
+        'domains',
+        'order',
+        'service',
+        'src',
+        'order-workflow-handler.ts',
+      ),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,

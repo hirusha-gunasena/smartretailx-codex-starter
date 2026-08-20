@@ -296,7 +296,16 @@ export class InventoryStack extends cdk.Stack {
     const inventoryApiFunction = new nodejs.NodejsFunction(this, 'InventoryApiFunction', {
       functionName: apiFunctionName,
       description: 'SmartRetailX Inventory HTTP API',
-      entry: join(repositoryRoot, 'domains', 'inventory', 'service', 'src', 'adapters', 'http', 'inventory-api-handler.ts'),
+      entry: join(
+        repositoryRoot,
+        'domains',
+        'inventory',
+        'service',
+        'src',
+        'adapters',
+        'http',
+        'inventory-api-handler.ts',
+      ),
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
@@ -319,7 +328,7 @@ export class InventoryStack extends cdk.Stack {
       new iam.PolicyStatement({
         actions: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         resources: [inventoryTable.tableArn],
-      })
+      }),
     );
 
     const inventoryIntegration = new integrations.HttpLambdaIntegration(
@@ -327,7 +336,7 @@ export class InventoryStack extends cdk.Stack {
       inventoryApiFunction,
       {
         payloadFormatVersion: apigatewayv2.PayloadFormatVersion.VERSION_2_0,
-      }
+      },
     );
 
     const inventoryApi = new apigatewayv2.HttpApi(this, 'InventoryApi', {
@@ -351,7 +360,7 @@ export class InventoryStack extends cdk.Stack {
       {
         authorizerName: `${apiFunctionName}-jwt-authorizer`,
         jwtAudience: [props.userPoolClientId],
-      }
+      },
     );
 
     inventoryApi.addRoutes({

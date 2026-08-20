@@ -1,22 +1,29 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import type { Product } from '../../api/catalogue';
-import { getProducts, createProduct, updateProduct, deleteProduct, getUploadUrl, uploadFileToS3 } from '../../api/catalogue';
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getUploadUrl,
+  uploadFileToS3,
+} from '../../api/catalogue';
 import { getInventory, setInventory } from '../../api/inventory';
 import toast from 'react-hot-toast';
-import { 
-  Search, 
-  Filter, 
-  ChevronLeft, 
-  ChevronRight, 
-  Edit2, 
-  Trash2, 
-  Plus, 
-  Package, 
+import {
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Edit2,
+  Trash2,
+  Plus,
+  Package,
   X,
   ArrowUpDown,
   CheckCircle2,
   XCircle,
-  Archive
+  Archive,
 } from 'lucide-react';
 
 interface ProductWithInventory extends Product {
@@ -34,7 +41,7 @@ export const AdminProducts: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  
+
   // Selection State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -58,14 +65,14 @@ export const AdminProducts: React.FC = () => {
     try {
       const prods = await getProducts();
       // Fetch inventory for all products to show in table
-      const inventoryPromises = prods.map(p => 
+      const inventoryPromises = prods.map((p) =>
         getInventory(p.productId)
-          .then(inv => ({ ...p, availableQuantity: inv.availableQuantity }))
-          .catch(() => ({ ...p, availableQuantity: 0 }))
+          .then((inv) => ({ ...p, availableQuantity: inv.availableQuantity }))
+          .catch(() => ({ ...p, availableQuantity: 0 })),
       );
       const prodsWithInv = await Promise.all(inventoryPromises);
       setProducts(prodsWithInv);
-    } catch (err) {
+    } catch {
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
@@ -78,18 +85,22 @@ export const AdminProducts: React.FC = () => {
 
   // Filtering, Sorting, and Pagination
   const filteredAndSortedProducts = useMemo(() => {
-    let result = products.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            p.productId.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === 'ALL' ? true : 
-                            statusFilter === 'IN_STOCK' ? p.availableQuantity > 0 : 
-                            p.availableQuantity === 0;
+    const result = products.filter((p) => {
+      const matchesSearch =
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.productId.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'ALL'
+          ? true
+          : statusFilter === 'IN_STOCK'
+            ? p.availableQuantity > 0
+            : p.availableQuantity === 0;
       return matchesSearch && matchesStatus;
     });
 
     result.sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
+      const aVal = a[sortField];
+      const bVal = b[sortField];
       if (typeof aVal === 'string' && typeof bVal === 'string') {
         return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       }
@@ -105,7 +116,7 @@ export const AdminProducts: React.FC = () => {
   const totalPages = Math.ceil(filteredAndSortedProducts.length / itemsPerPage);
   const paginatedProducts = filteredAndSortedProducts.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   // Handlers
@@ -120,7 +131,7 @@ export const AdminProducts: React.FC = () => {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIds(new Set(paginatedProducts.map(p => p.productId)));
+      setSelectedIds(new Set(paginatedProducts.map((p) => p.productId)));
     } else {
       setSelectedIds(new Set());
     }
@@ -140,11 +151,11 @@ export const AdminProducts: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete ${selectedIds.size} products?`)) {
       const loadingToast = toast.loading('Deleting products...');
       try {
-        await Promise.all(Array.from(selectedIds).map(id => deleteProduct(id)));
+        await Promise.all(Array.from(selectedIds).map((id) => deleteProduct(id)));
         toast.success(`Deleted ${selectedIds.size} products`, { id: loadingToast });
         setSelectedIds(new Set());
         fetchProducts();
-      } catch (err) {
+      } catch {
         toast.error('Failed to delete some products', { id: loadingToast });
       }
     }
@@ -155,12 +166,12 @@ export const AdminProducts: React.FC = () => {
     const loadingToast = toast.loading('Updating inventory...');
     try {
       const qty = parseInt(bulkQuantity, 10) || 0;
-      await Promise.all(Array.from(selectedIds).map(id => setInventory(id, qty)));
+      await Promise.all(Array.from(selectedIds).map((id) => setInventory(id, qty)));
       toast.success(`Updated inventory for ${selectedIds.size} products`, { id: loadingToast });
       setIsBulkUpdateModalOpen(false);
       setSelectedIds(new Set());
       fetchProducts();
-    } catch (err) {
+    } catch {
       toast.error('Failed to update inventory', { id: loadingToast });
     }
   };
@@ -174,12 +185,19 @@ export const AdminProducts: React.FC = () => {
         price: product.price.toString(),
         currency: product.currency,
         imageUrl: product.imageUrl || '',
-        quantity: product.availableQuantity.toString(), 
+        quantity: product.availableQuantity.toString(),
       });
       setIsModalOpen(true);
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', description: '', price: '', currency: 'USD', imageUrl: '', quantity: '0' });
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        currency: 'USD',
+        imageUrl: '',
+        quantity: '0',
+      });
       setIsModalOpen(true);
     }
   };
@@ -232,7 +250,7 @@ export const AdminProducts: React.FC = () => {
 
   // Stats
   const totalProducts = products.length;
-  const outOfStockCount = products.filter(p => p.availableQuantity === 0).length;
+  const outOfStockCount = products.filter((p) => p.availableQuantity === 0).length;
 
   return (
     <div className="space-y-6">
@@ -243,7 +261,9 @@ export const AdminProducts: React.FC = () => {
             <Package className="w-6 h-6 text-gray-700" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Total Products</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+              Total Products
+            </p>
             <p className="text-2xl font-bold text-gray-900 mt-1">{totalProducts}</p>
           </div>
         </div>
@@ -252,7 +272,9 @@ export const AdminProducts: React.FC = () => {
             <Archive className="w-6 h-6 text-red-600" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Out of Stock</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+              Out of Stock
+            </p>
             <p className="text-2xl font-bold text-gray-900 mt-1">{outOfStockCount}</p>
           </div>
         </div>
@@ -292,7 +314,7 @@ export const AdminProducts: React.FC = () => {
               <Filter className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
+                onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 text-sm focus:outline-none focus:border-black appearance-none bg-white transition-colors cursor-pointer"
               >
                 <option value="ALL">All Status</option>
@@ -334,12 +356,14 @@ export const AdminProducts: React.FC = () => {
                 <th className="p-4 w-12">
                   <input
                     type="checkbox"
-                    checked={paginatedProducts.length > 0 && selectedIds.size === paginatedProducts.length}
+                    checked={
+                      paginatedProducts.length > 0 && selectedIds.size === paginatedProducts.length
+                    }
                     onChange={handleSelectAll}
                     className="w-4 h-4 text-black border-gray-300 rounded cursor-pointer accent-black focus:ring-black"
                   />
                 </th>
-                <th 
+                <th
                   className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500 cursor-pointer hover:text-gray-900 transition-colors"
                   onClick={() => handleSort('name')}
                 >
@@ -350,7 +374,7 @@ export const AdminProducts: React.FC = () => {
                 <th className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Status
                 </th>
-                <th 
+                <th
                   className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500 cursor-pointer hover:text-gray-900 transition-colors"
                   onClick={() => handleSort('availableQuantity')}
                 >
@@ -358,7 +382,7 @@ export const AdminProducts: React.FC = () => {
                     Inventory <ArrowUpDown className="w-3 h-3 ml-1" />
                   </div>
                 </th>
-                <th 
+                <th
                   className="p-4 text-xs font-semibold uppercase tracking-wider text-gray-500 cursor-pointer hover:text-gray-900 transition-colors"
                   onClick={() => handleSort('price')}
                 >
@@ -374,7 +398,10 @@ export const AdminProducts: React.FC = () => {
             <tbody className="divide-y divide-gray-100">
               {loading && products.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-sm uppercase tracking-wider text-gray-400">
+                  <td
+                    colSpan={6}
+                    className="p-12 text-center text-sm uppercase tracking-wider text-gray-400"
+                  >
                     Loading products...
                   </td>
                 </tr>
@@ -386,7 +413,10 @@ export const AdminProducts: React.FC = () => {
                 </tr>
               ) : (
                 paginatedProducts.map((product) => (
-                  <tr key={product.productId} className={`hover:bg-gray-50 transition-colors ${selectedIds.has(product.productId) ? 'bg-gray-50' : ''}`}>
+                  <tr
+                    key={product.productId}
+                    className={`hover:bg-gray-50 transition-colors ${selectedIds.has(product.productId) ? 'bg-gray-50' : ''}`}
+                  >
                     <td className="p-4">
                       <input
                         type="checkbox"
@@ -398,7 +428,11 @@ export const AdminProducts: React.FC = () => {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         {product.imageUrl ? (
-                          <img src={product.imageUrl} alt={product.name} className="w-10 h-10 object-cover border border-gray-200" />
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="w-10 h-10 object-cover border border-gray-200"
+                          />
                         ) : (
                           <div className="w-10 h-10 bg-gray-100 border border-gray-200 flex items-center justify-center">
                             <Package className="w-5 h-5 text-gray-400" />
@@ -406,7 +440,9 @@ export const AdminProducts: React.FC = () => {
                         )}
                         <div>
                           <div className="font-semibold text-sm text-gray-900">{product.name}</div>
-                          <div className="text-xs font-mono text-gray-400 mt-0.5">{product.productId.substring(0, 8)}...</div>
+                          <div className="text-xs font-mono text-gray-400 mt-0.5">
+                            {product.productId.substring(0, 8)}...
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -421,11 +457,10 @@ export const AdminProducts: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td className="p-4 text-sm text-gray-900">
-                      {product.availableQuantity} units
-                    </td>
+                    <td className="p-4 text-sm text-gray-900">{product.availableQuantity} units</td>
                     <td className="p-4 text-sm font-medium text-gray-900">
-                      ${product.price.toFixed(2)} <span className="text-gray-400 font-normal">{product.currency}</span>
+                      ${product.price.toFixed(2)}{' '}
+                      <span className="text-gray-400 font-normal">{product.currency}</span>
                     </td>
                     <td className="p-4 text-right">
                       <button
@@ -454,18 +489,20 @@ export const AdminProducts: React.FC = () => {
         {totalPages > 1 && (
           <div className="p-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
             <span className="text-sm text-gray-500">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredAndSortedProducts.length)} of {filteredAndSortedProducts.length} entries
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+              {Math.min(currentPage * itemsPerPage, filteredAndSortedProducts.length)} of{' '}
+              {filteredAndSortedProducts.length} entries
             </span>
             <div className="flex gap-2">
               <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="p-2 border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className="p-2 border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
@@ -484,11 +521,14 @@ export const AdminProducts: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-900 tracking-tight">
                 {editingProduct ? 'Edit Product' : 'Add New Product'}
               </h2>
-              <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-900 transition-colors">
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-gray-900 transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-8 overflow-y-auto">
               <form id="product-form" onSubmit={handleSubmit} className="space-y-5">
                 <div>
@@ -560,7 +600,11 @@ export const AdminProducts: React.FC = () => {
                   </label>
                   <div className="flex gap-4 items-start">
                     {formData.imageUrl && (
-                      <img src={formData.imageUrl} alt="Preview" className="w-20 h-20 object-cover border border-gray-200 shadow-sm" />
+                      <img
+                        src={formData.imageUrl}
+                        alt="Preview"
+                        className="w-20 h-20 object-cover border border-gray-200 shadow-sm"
+                      />
                     )}
                     <div className="flex-1">
                       <input
@@ -569,19 +613,20 @@ export const AdminProducts: React.FC = () => {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          
+
                           try {
                             setIsUploading(true);
                             toast.loading('Preparing upload...', { id: 'upload' });
                             const { uploadUrl, imageUrl } = await getUploadUrl(file.type);
-                            
+
                             toast.loading('Uploading image...', { id: 'upload' });
                             await uploadFileToS3(uploadUrl, file);
-                            
-                            setFormData(prev => ({ ...prev, imageUrl }));
+
+                            setFormData((prev) => ({ ...prev, imageUrl }));
                             toast.success('Image uploaded successfully', { id: 'upload' });
                           } catch (err: unknown) {
-                            const errorMessage = err instanceof Error ? err.message : 'Upload failed';
+                            const errorMessage =
+                              err instanceof Error ? err.message : 'Upload failed';
                             toast.error(errorMessage, { id: 'upload' });
                           } finally {
                             setIsUploading(false);
@@ -596,7 +641,7 @@ export const AdminProducts: React.FC = () => {
                 </div>
               </form>
             </div>
-            
+
             <div className="px-8 py-6 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
               <button
                 type="button"
@@ -611,7 +656,11 @@ export const AdminProducts: React.FC = () => {
                 disabled={isUploading}
                 className="bg-black text-white px-8 py-2.5 text-xs font-semibold uppercase tracking-widest hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
-                {isUploading ? 'Uploading...' : editingProduct ? 'Update Product' : 'Create Product'}
+                {isUploading
+                  ? 'Uploading...'
+                  : editingProduct
+                    ? 'Update Product'
+                    : 'Create Product'}
               </button>
             </div>
           </div>
@@ -623,8 +672,10 @@ export const AdminProducts: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
           <div className="bg-white p-8 max-w-sm w-full shadow-2xl">
             <h2 className="text-xl font-bold text-gray-900 mb-2">Update Inventory</h2>
-            <p className="text-sm text-gray-500 mb-6">Set the available quantity for {selectedIds.size} products.</p>
-            
+            <p className="text-sm text-gray-500 mb-6">
+              Set the available quantity for {selectedIds.size} products.
+            </p>
+
             <form onSubmit={handleBulkUpdateQuantity}>
               <div className="mb-6">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">

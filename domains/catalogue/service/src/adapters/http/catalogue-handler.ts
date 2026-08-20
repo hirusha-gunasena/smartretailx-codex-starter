@@ -92,23 +92,30 @@ export const createCatalogueHandler = (
           authorizationMetadata,
           authorizationLogger,
         );
-        
+
         let body: { contentType?: string } = {};
         if (event.body) {
           try {
-            body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body) as { contentType?: string };
+            body = JSON.parse(
+              event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString() : event.body,
+            ) as { contentType?: string };
           } catch {
             // ignore invalid JSON and fall back to default empty object
           }
         }
-        
+
         const contentType = body.contentType || 'image/jpeg';
         const extension = contentType === 'image/png' ? 'png' : 'jpg';
         const fileKey = `${crypto.randomUUID()}.${extension}`;
         const bucketName = process.env.PRODUCT_IMAGES_BUCKET_NAME;
-        
+
         if (!bucketName) {
-          return errorResponse(500, 'SERVER_ERROR', 'PRODUCT_IMAGES_BUCKET_NAME is not configured', requestId);
+          return errorResponse(
+            500,
+            'SERVER_ERROR',
+            'PRODUCT_IMAGES_BUCKET_NAME is not configured',
+            requestId,
+          );
         }
 
         const command = new PutObjectCommand({

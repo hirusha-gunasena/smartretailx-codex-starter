@@ -250,15 +250,19 @@ export class AuthStack extends cdk.Stack {
 
     adminApiFunction.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ['cognito-idp:ListUsers', 'cognito-idp:AdminDisableUser', 'cognito-idp:AdminUpdateUserAttributes'],
+        actions: [
+          'cognito-idp:ListUsers',
+          'cognito-idp:AdminDisableUser',
+          'cognito-idp:AdminUpdateUserAttributes',
+        ],
         resources: [userPool.userPoolArn],
-      })
+      }),
     );
 
     const adminIntegration = new integrations.HttpLambdaIntegration(
       'AdminIntegration',
       adminApiFunction,
-      { payloadFormatVersion: apigatewayv2.PayloadFormatVersion.VERSION_2_0 }
+      { payloadFormatVersion: apigatewayv2.PayloadFormatVersion.VERSION_2_0 },
     );
 
     const adminApi = new apigatewayv2.HttpApi(this, 'AdminApi', {
@@ -275,14 +279,10 @@ export class AuthStack extends cdk.Stack {
       },
     });
 
-    const adminAuthorizer = new HttpJwtAuthorizer(
-      'AdminJwtAuthorizer',
-      this.issuer,
-      {
-        authorizerName: `${resourcePrefix}-admin-jwt-authorizer`,
-        jwtAudience: [userPoolClient.userPoolClientId],
-      }
-    );
+    const adminAuthorizer = new HttpJwtAuthorizer('AdminJwtAuthorizer', this.issuer, {
+      authorizerName: `${resourcePrefix}-admin-jwt-authorizer`,
+      jwtAudience: [userPoolClient.userPoolClientId],
+    });
 
     adminApi.addRoutes({
       path: '/api/v1/users',

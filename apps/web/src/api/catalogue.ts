@@ -41,7 +41,9 @@ export const deleteProduct = (id: string): Promise<void> => {
   });
 };
 
-export const getUploadUrl = (contentType: string): Promise<{ uploadUrl: string; imageUrl: string }> => {
+export const getUploadUrl = (
+  contentType: string,
+): Promise<{ uploadUrl: string; imageUrl: string }> => {
   return fetchWithAuth(`${API_URL}/api/v1/products/upload-url`, {
     method: 'POST',
     body: JSON.stringify({ contentType }),

@@ -7,7 +7,7 @@ export const PRODUCT_ID = __ENV.PRODUCT_ID || 'sample-product-id';
 
 export const commonHeaders = {
   'Content-Type': 'application/json',
-  'Authorization': `Bearer ${AUTH_TOKEN}`
+  Authorization: `Bearer ${AUTH_TOKEN}`,
 };
 
 export function checkResponse(res, name) {
@@ -19,7 +19,7 @@ export function checkResponse(res, name) {
 export function browseCatalogue() {
   const res = http.get(`${BASE_URL}/api/v1/catalogue`);
   checkResponse(res, 'List Products');
-  
+
   if (res.status === 200) {
     const products = res.json();
     if (products && products.length > 0) {

@@ -50,7 +50,8 @@ export const Home: React.FC = () => {
               <span className="text-gray-300 italic font-light">Performance.</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-lg font-light">
-              Elevate your creative workflow with our curated selection of premium electronics and workspace essentials.
+              Elevate your creative workflow with our curated selection of premium electronics and
+              workspace essentials.
             </p>
             <div className="flex gap-4">
               <Link
@@ -92,7 +93,9 @@ export const Home: React.FC = () => {
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row items-end justify-between mb-12">
             <div>
-              <h2 className="text-4xl font-bold text-gray-900 tracking-tight mb-2">Shop Categories</h2>
+              <h2 className="text-4xl font-bold text-gray-900 tracking-tight mb-2">
+                Shop Categories
+              </h2>
               <p className="text-gray-500">Curated collections for your specific needs.</p>
             </div>
             <Link
@@ -116,7 +119,9 @@ export const Home: React.FC = () => {
                 className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
               />
               <div className="absolute bottom-0 left-0 p-10 z-20">
-                <span className="text-white/80 text-xs font-bold uppercase tracking-widest mb-2 block">Collection</span>
+                <span className="text-white/80 text-xs font-bold uppercase tracking-widest mb-2 block">
+                  Collection
+                </span>
                 <h3 className="text-4xl font-bold text-white mb-4">Laptops & Desktops</h3>
                 <span className="inline-flex items-center justify-center px-6 py-3 bg-white text-black font-semibold text-xs uppercase tracking-widest group-hover:bg-gray-100 transition-colors">
                   Explore
@@ -139,7 +144,9 @@ export const Home: React.FC = () => {
                 <div className="absolute bottom-0 left-0 p-8 z-20 w-full">
                   <h3 className="text-2xl font-bold text-white mb-2">Premium Audio</h3>
                   <div className="flex items-center justify-between">
-                    <span className="text-white text-xs font-semibold uppercase tracking-widest">Shop Now</span>
+                    <span className="text-white text-xs font-semibold uppercase tracking-widest">
+                      Shop Now
+                    </span>
                     <ChevronRight className="text-white w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
@@ -157,7 +164,9 @@ export const Home: React.FC = () => {
                 <div className="absolute bottom-0 left-0 p-8 z-20 w-full">
                   <h3 className="text-2xl font-bold text-white mb-2">Workspace Accessories</h3>
                   <div className="flex items-center justify-between">
-                    <span className="text-white text-xs font-semibold uppercase tracking-widest">Shop Now</span>
+                    <span className="text-white text-xs font-semibold uppercase tracking-widest">
+                      Shop Now
+                    </span>
                     <ChevronRight className="text-white w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
@@ -197,7 +206,9 @@ export const Home: React.FC = () => {
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-200 group-hover:scale-105 transition-transform duration-700">
-                        <span className="font-mono text-xs tracking-widest uppercase">No Image</span>
+                        <span className="font-mono text-xs tracking-widest uppercase">
+                          No Image
+                        </span>
                       </div>
                     )}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300"></div>
@@ -206,7 +217,9 @@ export const Home: React.FC = () => {
                     {product.name}
                   </h3>
                   <p className="text-sm text-gray-500 mb-2 line-clamp-1">{product.description}</p>
-                  <p className="text-base font-semibold text-gray-900">${product.price.toFixed(2)}</p>
+                  <p className="text-base font-semibold text-gray-900">
+                    ${product.price.toFixed(2)}
+                  </p>
                 </Link>
               ))
             ) : (
@@ -222,9 +235,12 @@ export const Home: React.FC = () => {
       <section className="bg-black text-white">
         <div className="flex flex-col md:flex-row">
           <div className="md:w-1/2 p-12 md:p-24 flex flex-col justify-center">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">The Studio Display</h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+              The Studio Display
+            </h2>
             <p className="text-gray-400 text-lg mb-8 font-light max-w-md">
-              A mesmerizing 27-inch 5K Retina display that draws you in. A 12MP Ultra Wide camera with Center Stage. And studio-quality mics.
+              A mesmerizing 27-inch 5K Retina display that draws you in. A 12MP Ultra Wide camera
+              with Center Stage. And studio-quality mics.
             </p>
             <div>
               <Link
@@ -236,9 +252,9 @@ export const Home: React.FC = () => {
             </div>
           </div>
           <div className="md:w-1/2 h-[400px] md:h-auto">
-            <img 
-              src="https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
-              alt="Macbook Pro" 
+            <img
+              src="https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+              alt="Macbook Pro"
               className="w-full h-full object-cover"
             />
           </div>
@@ -249,7 +265,9 @@ export const Home: React.FC = () => {
       <section className="py-24 bg-white">
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 tracking-tight text-center">Trending Right Now</h2>
+            <h2 className="text-4xl font-bold text-gray-900 tracking-tight text-center">
+              Trending Right Now
+            </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -269,7 +287,9 @@ export const Home: React.FC = () => {
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-100 group-hover:scale-105 transition-transform duration-700">
-                        <span className="font-mono text-xs tracking-widest uppercase">No Image</span>
+                        <span className="font-mono text-xs tracking-widest uppercase">
+                          No Image
+                        </span>
                       </div>
                     )}
                   </div>
@@ -277,7 +297,9 @@ export const Home: React.FC = () => {
                     <h3 className="text-sm font-bold text-gray-900 mb-1 group-hover:underline uppercase tracking-wide">
                       {product.name}
                     </h3>
-                    <p className="text-sm font-semibold text-gray-500">${product.price.toFixed(2)}</p>
+                    <p className="text-sm font-semibold text-gray-500">
+                      ${product.price.toFixed(2)}
+                    </p>
                   </div>
                 </Link>
               ))
@@ -295,16 +317,17 @@ export const Home: React.FC = () => {
         <div className="container mx-auto px-6 max-w-3xl text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight">Join The List</h2>
           <p className="text-gray-500 mb-8 font-light">
-            Sign up for our newsletter to receive exclusive offers, early access to new drops, and the latest tech news.
+            Sign up for our newsletter to receive exclusive offers, early access to new drops, and
+            the latest tech news.
           </p>
           <form className="flex flex-col sm:flex-row gap-4" onSubmit={(e) => e.preventDefault()}>
-            <input 
-              type="email" 
-              placeholder="Enter your email address" 
+            <input
+              type="email"
+              placeholder="Enter your email address"
               className="flex-1 px-6 py-4 border border-gray-300 focus:outline-none focus:border-gray-900 transition-colors rounded-none"
               required
             />
-            <button 
+            <button
               type="submit"
               className="px-10 py-4 bg-gray-900 text-white font-semibold hover:bg-black transition-colors uppercase tracking-widest text-xs rounded-none whitespace-nowrap"
             >

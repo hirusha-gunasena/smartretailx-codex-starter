@@ -1,4 +1,8 @@
-import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2, Handler } from 'aws-lambda';
+import type {
+  APIGatewayProxyEventV2,
+  APIGatewayProxyStructuredResultV2,
+  Handler,
+} from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
@@ -7,7 +11,9 @@ const documentClient = DynamoDBDocumentClient.from(client);
 
 const INVENTORY_TABLE = process.env.INVENTORY_TABLE_NAME!;
 
-export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2> = async (event) => {
+export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2> = async (
+  event,
+) => {
   try {
     const method = event.requestContext.http.method.toUpperCase();
     const productId = event.pathParameters?.productId;
@@ -21,7 +27,7 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredR
         new GetCommand({
           TableName: INVENTORY_TABLE,
           Key: { productId },
-        })
+        }),
       );
       return {
         statusCode: 200,
@@ -35,10 +41,14 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredR
 
     if (method === 'PATCH' || method === 'PUT') {
       const body = JSON.parse(event.body || '{}');
-      const quantity = typeof body.quantity === 'number' ? body.quantity : parseInt(body.quantity, 10);
-      
+      const quantity =
+        typeof body.quantity === 'number' ? body.quantity : parseInt(body.quantity, 10);
+
       if (isNaN(quantity)) {
-        return { statusCode: 400, body: JSON.stringify({ message: 'quantity must be a valid number' }) };
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ message: 'quantity must be a valid number' }),
+        };
       }
 
       await documentClient.send(
@@ -49,7 +59,7 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredR
             availableQuantity: quantity,
             updatedAt: new Date().toISOString(),
           },
-        })
+        }),
       );
 
       return {

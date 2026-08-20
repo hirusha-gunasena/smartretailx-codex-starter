@@ -69,7 +69,10 @@ export class ObservabilityStack extends cdk.Stack {
       ],
     });
 
-    dashboard.addWidgets(allLambdaErrorsWidget as cloudwatch.IWidget, allLambdaInvocationsWidget as cloudwatch.IWidget);
+    dashboard.addWidgets(
+      allLambdaErrorsWidget as cloudwatch.IWidget,
+      allLambdaInvocationsWidget as cloudwatch.IWidget,
+    );
 
     // -----------------------------------------------------------
     // 2. COMPUTE / LAMBDA METRICS
@@ -123,8 +126,12 @@ export class ObservabilityStack extends cdk.Stack {
     // 3. ECS FARGATE (ORDER SERVICE) METRICS
     // -----------------------------------------------------------
 
-    const ecsCpuMetric = props.orderServiceStack.orderService.metricCpuUtilization({ label: 'CPU Utilization' });
-    const ecsMemMetric = props.orderServiceStack.orderService.metricMemoryUtilization({ label: 'Memory Utilization' });
+    const ecsCpuMetric = props.orderServiceStack.orderService.metricCpuUtilization({
+      label: 'CPU Utilization',
+    });
+    const ecsMemMetric = props.orderServiceStack.orderService.metricMemoryUtilization({
+      label: 'Memory Utilization',
+    });
 
     const ecsCpuAlarm = ecsCpuMetric.createAlarm(this, 'OrderServiceCpuAlarm', {
       alarmName: `${projectName}-${environmentName}-OrderService-CPU`,
@@ -156,7 +163,10 @@ export class ObservabilityStack extends cdk.Stack {
     // 4. SQS QUEUE METRICS
     // -----------------------------------------------------------
 
-    const invQueueAgeMetric = props.inventoryStack.inventoryQueue.metricApproximateAgeOfOldestMessage({ label: 'Oldest Message Age (s)' });
+    const invQueueAgeMetric =
+      props.inventoryStack.inventoryQueue.metricApproximateAgeOfOldestMessage({
+        label: 'Oldest Message Age (s)',
+      });
     const invQueueAlarm = invQueueAgeMetric.createAlarm(this, 'InventoryQueueAgeAlarm', {
       alarmName: `${projectName}-${environmentName}-InventoryQueue-Age`,
       threshold: 300,
@@ -166,7 +176,10 @@ export class ObservabilityStack extends cdk.Stack {
     invQueueAlarm.addAlarmAction(alarmAction);
     allAlarms.push(invQueueAlarm);
 
-    const wfQueueAgeMetric = props.orderWorkflowStack.workflowQueue.metricApproximateAgeOfOldestMessage({ label: 'Oldest Message Age (s)' });
+    const wfQueueAgeMetric =
+      props.orderWorkflowStack.workflowQueue.metricApproximateAgeOfOldestMessage({
+        label: 'Oldest Message Age (s)',
+      });
     const wfQueueAlarm = wfQueueAgeMetric.createAlarm(this, 'WorkflowQueueAgeAlarm', {
       alarmName: `${projectName}-${environmentName}-WorkflowQueue-Age`,
       threshold: 300,
@@ -180,13 +193,21 @@ export class ObservabilityStack extends cdk.Stack {
       new cloudwatch.GraphWidget({
         title: 'Inventory Queue Backlog',
         width: 12,
-        left: [props.inventoryStack.inventoryQueue.metricApproximateNumberOfMessagesVisible({ label: 'Visible Messages' })],
+        left: [
+          props.inventoryStack.inventoryQueue.metricApproximateNumberOfMessagesVisible({
+            label: 'Visible Messages',
+          }),
+        ],
         right: [invQueueAgeMetric],
       }) as cloudwatch.IWidget,
       new cloudwatch.GraphWidget({
         title: 'Order Workflow Queue Backlog',
         width: 12,
-        left: [props.orderWorkflowStack.workflowQueue.metricApproximateNumberOfMessagesVisible({ label: 'Visible Messages' })],
+        left: [
+          props.orderWorkflowStack.workflowQueue.metricApproximateNumberOfMessagesVisible({
+            label: 'Visible Messages',
+          }),
+        ],
         right: [wfQueueAgeMetric],
       }) as cloudwatch.IWidget,
     );
@@ -200,7 +221,7 @@ export class ObservabilityStack extends cdk.Stack {
       title: 'System Alarms Status',
       width: 24,
     });
-    
+
     // Add to the top of the dashboard
     dashboard.addWidgets(alarmWidget as cloudwatch.IWidget);
 

@@ -25,7 +25,7 @@ export const Catalogue: React.FC = () => {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Filter States
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState(PRICE_RANGES[0]!);
@@ -38,9 +38,7 @@ export const Catalogue: React.FC = () => {
   useEffect(() => {
     getProducts()
       .then((data) => {
-        // the backend returns { success: true, data: Product[], requestId: "..." }
-        // BUT wait, getProducts() in api/catalogue.ts already returns Promise<Product[]> because fetchWithAuth probably unwraps it, or does it? Let's assume fetchWithAuth unwraps it. Wait, previously I had to use data.data in Home.tsx because it didn't use fetchWithAuth, it used raw fetch! Yes, Home.tsx used raw fetch. Catalogue uses getProducts() which uses fetchWithAuth.
-        setAllProducts(Array.isArray(data) ? data : (data as any).data || []);
+        setAllProducts(data);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -51,7 +49,7 @@ export const Catalogue: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const categoryQuery = params.get('category')?.toLowerCase();
     if (categoryQuery) {
-      const match = CATEGORIES.find(c => c.toLowerCase() === categoryQuery);
+      const match = CATEGORIES.find((c) => c.toLowerCase() === categoryQuery);
       if (match && !selectedCategories.includes(match)) {
         setSelectedCategories([match]);
       }
@@ -59,8 +57,8 @@ export const Catalogue: React.FC = () => {
   }, [location.search]);
 
   const toggleCategory = (cat: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
     );
   };
 
@@ -80,15 +78,15 @@ export const Catalogue: React.FC = () => {
 
     // 2. Category Filter (derive by matching category name against product name/description)
     if (selectedCategories.length > 0) {
-      result = result.filter(p => {
+      result = result.filter((p) => {
         const text = `${p.name} ${p.description || ''}`.toLowerCase();
-        return selectedCategories.some(cat => text.includes(cat.toLowerCase()));
+        return selectedCategories.some((cat) => text.includes(cat.toLowerCase()));
       });
     }
 
     // 3. Price Filter
     if (selectedPrice.max !== Infinity || selectedPrice.min !== 0) {
-      result = result.filter(p => p.price >= selectedPrice.min && p.price <= selectedPrice.max);
+      result = result.filter((p) => p.price >= selectedPrice.min && p.price <= selectedPrice.max);
     }
 
     // 4. Sorting
@@ -116,18 +114,20 @@ export const Catalogue: React.FC = () => {
         Loading Catalogue...
       </div>
     );
-  
-  if (error) 
-    return <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>;
+
+  if (error) return <div className="text-center text-red-600 py-20 text-sm">Error: {error}</div>;
 
   return (
     <div className="bg-white min-h-screen">
       {/* Page Header */}
       <div className="border-b border-gray-200 bg-gray-50 pt-16 pb-12">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 tracking-tight uppercase">The Collection</h1>
+          <h1 className="text-4xl font-bold text-gray-900 tracking-tight uppercase">
+            The Collection
+          </h1>
           <p className="text-sm text-gray-500 mt-4 max-w-2xl mx-auto">
-            Discover our meticulously curated selection of premium electronics. Designed for aesthetics. Engineered for performance.
+            Discover our meticulously curated selection of premium electronics. Designed for
+            aesthetics. Engineered for performance.
           </p>
         </div>
       </div>
@@ -136,7 +136,7 @@ export const Catalogue: React.FC = () => {
         {/* Toolbar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-gray-200 pb-6 mb-8">
           <div className="flex items-center justify-between w-full md:w-auto mb-4 md:mb-0">
-            <button 
+            <button
               className="md:hidden flex items-center text-sm font-semibold uppercase tracking-wider text-gray-900"
               onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
             >
@@ -150,13 +150,15 @@ export const Catalogue: React.FC = () => {
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500 font-medium">Sort by:</span>
             <div className="relative">
-              <select 
+              <select
                 className="appearance-none bg-transparent text-sm font-semibold text-gray-900 pr-8 py-1 cursor-pointer focus:outline-none"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
-                {SORT_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
               <ChevronDown className="w-4 h-4 text-gray-900 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -166,25 +168,35 @@ export const Catalogue: React.FC = () => {
 
         <div className="flex flex-col md:flex-row gap-12">
           {/* Sidebar Filters */}
-          <div className={`w-full md:w-64 flex-shrink-0 ${isMobileFiltersOpen ? 'block' : 'hidden md:block'}`}>
+          <div
+            className={`w-full md:w-64 flex-shrink-0 ${isMobileFiltersOpen ? 'block' : 'hidden md:block'}`}
+          >
             {/* Categories */}
             <div className="mb-10">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-4">Category</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-4">
+                Category
+              </h3>
               <div className="space-y-3">
-                {CATEGORIES.map(category => (
+                {CATEGORIES.map((category) => (
                   <label key={category} className="flex items-center group cursor-pointer">
-                    <div className={`w-4 h-4 border flex items-center justify-center transition-colors ${selectedCategories.includes(category) ? 'bg-black border-black' : 'border-gray-300 group-hover:border-black'}`}>
+                    <div
+                      className={`w-4 h-4 border flex items-center justify-center transition-colors ${selectedCategories.includes(category) ? 'bg-black border-black' : 'border-gray-300 group-hover:border-black'}`}
+                    >
                       {selectedCategories.includes(category) && (
-                        <svg className="w-3 h-3 text-white fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>
+                        <svg className="w-3 h-3 text-white fill-current" viewBox="0 0 20 20">
+                          <path d="M0 11l2-2 5 5L18 3l2 2L7 18z" />
+                        </svg>
                       )}
                     </div>
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="hidden"
                       checked={selectedCategories.includes(category)}
                       onChange={() => toggleCategory(category)}
                     />
-                    <span className={`ml-3 text-sm transition-colors ${selectedCategories.includes(category) ? 'text-black font-medium' : 'text-gray-600 group-hover:text-black'}`}>
+                    <span
+                      className={`ml-3 text-sm transition-colors ${selectedCategories.includes(category) ? 'text-black font-medium' : 'text-gray-600 group-hover:text-black'}`}
+                    >
                       {category}
                     </span>
                   </label>
@@ -194,23 +206,29 @@ export const Catalogue: React.FC = () => {
 
             {/* Price */}
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-4">Price</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-4">
+                Price
+              </h3>
               <div className="space-y-3">
                 {PRICE_RANGES.map((range, idx) => (
                   <label key={idx} className="flex items-center group cursor-pointer">
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${selectedPrice.label === range.label ? 'border-black' : 'border-gray-300 group-hover:border-black'}`}>
+                    <div
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${selectedPrice.label === range.label ? 'border-black' : 'border-gray-300 group-hover:border-black'}`}
+                    >
                       {selectedPrice.label === range.label && (
                         <div className="w-2 h-2 rounded-full bg-black" />
                       )}
                     </div>
-                    <input 
-                      type="radio" 
+                    <input
+                      type="radio"
                       name="price"
                       className="hidden"
                       checked={selectedPrice.label === range.label}
                       onChange={() => setSelectedPrice(range)}
                     />
-                    <span className={`ml-3 text-sm transition-colors ${selectedPrice.label === range.label ? 'text-black font-medium' : 'text-gray-600 group-hover:text-black'}`}>
+                    <span
+                      className={`ml-3 text-sm transition-colors ${selectedPrice.label === range.label ? 'text-black font-medium' : 'text-gray-600 group-hover:text-black'}`}
+                    >
                       {range.label}
                     </span>
                   </label>
@@ -224,9 +242,15 @@ export const Catalogue: React.FC = () => {
             {filteredAndSortedProducts.length === 0 ? (
               <div className="text-center py-24 bg-gray-50 border border-gray-100">
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No matches found</h3>
-                <p className="text-sm text-gray-500">We couldn't find any products matching your current filters. Try adjusting your selections.</p>
-                <button 
-                  onClick={() => { setSelectedCategories([]); setSelectedPrice(PRICE_RANGES[0]!); }}
+                <p className="text-sm text-gray-500">
+                  We couldn't find any products matching your current filters. Try adjusting your
+                  selections.
+                </p>
+                <button
+                  onClick={() => {
+                    setSelectedCategories([]);
+                    setSelectedPrice(PRICE_RANGES[0]!);
+                  }}
                   className="mt-6 text-sm font-semibold uppercase tracking-wider text-black border-b border-black pb-1 hover:text-gray-600 hover:border-gray-600 transition-colors"
                 >
                   Clear all filters
@@ -263,9 +287,7 @@ export const Catalogue: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex justify-between items-start">
-                        <h3 className="text-sm font-medium text-gray-900 pr-4">
-                          {product.name}
-                        </h3>
+                        <h3 className="text-sm font-medium text-gray-900 pr-4">{product.name}</h3>
                         <p className="text-sm text-gray-900 font-semibold whitespace-nowrap">
                           ${product.price.toFixed(2)}
                         </p>

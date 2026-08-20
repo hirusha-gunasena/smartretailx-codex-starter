@@ -3,3 +3,5 @@ cdk.out
 dist
 coverage
 package-lock.json
+evidence/10-observability/dashboard_config.json
+evidence/12-cdk-infrastructure/*.template.json
