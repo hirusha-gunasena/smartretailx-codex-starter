@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Product } from '../api/catalogue';
 import { getProduct } from '../api/catalogue';
+import { getInventory } from '../api/inventory';
 import { useCart } from '../cart/CartProvider';
-import { Plus, Minus, ChevronDown, ChevronUp, Truck, ShieldCheck } from 'lucide-react';
+import { Plus, Minus, ChevronDown, ChevronUp, Truck, ShieldCheck, CheckCircle2, XCircle } from 'lucide-react';
 
 export const ProductDetail: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -11,6 +12,7 @@ export const ProductDetail: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [stockLevel, setStockLevel] = useState<number | null>(null);
   
   const [quantity, setQuantity] = useState(1);
   const [openAccordion, setOpenAccordion] = useState<string | null>('details');
@@ -19,10 +21,14 @@ export const ProductDetail: React.FC = () => {
 
   useEffect(() => {
     if (!productId) return;
-    getProduct(productId)
-      .then((data) => {
-        // Backend returns { success: true, data: Product }
-        setProduct((data as any).data || data);
+    
+    Promise.all([
+      getProduct(productId),
+      getInventory(productId).catch(() => ({ stockLevel: 0 })) // fallback if inventory fails or not found
+    ])
+      .then(([productData, inventoryData]) => {
+        setProduct((productData as any).data || productData);
+        setStockLevel(inventoryData.stockLevel || 0);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -91,10 +97,24 @@ export const ProductDetail: React.FC = () => {
 
           {/* Right: Product Details */}
           <div className="w-full lg:w-2/5 flex flex-col pt-4">
-            <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight leading-tight">{product.name}</h1>
-            <p className="text-2xl font-medium text-gray-900 mt-6">
-              ${product.price.toFixed(2)} <span className="text-base text-gray-500 font-normal">{product.currency}</span>
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight leading-tight">{product.name}</h1>
+            </div>
+            
+            <div className="flex items-center space-x-4 mt-6">
+              <p className="text-2xl font-medium text-gray-900">
+                ${product.price.toFixed(2)} <span className="text-base text-gray-500 font-normal">{product.currency}</span>
+              </p>
+              {stockLevel !== null && (
+                <span className={`flex items-center text-xs font-semibold uppercase tracking-widest px-3 py-1 border ${stockLevel > 0 ? 'text-green-700 border-green-200 bg-green-50' : 'text-red-700 border-red-200 bg-red-50'}`}>
+                  {stockLevel > 0 ? (
+                    <><CheckCircle2 className="w-3 h-3 mr-1" /> In Stock</>
+                  ) : (
+                    <><XCircle className="w-3 h-3 mr-1" /> Out of Stock</>
+                  )}
+                </span>
+              )}
+            </div>
             
             <div className="mt-8">
               <p className="text-gray-600 leading-relaxed">
@@ -106,17 +126,19 @@ export const ProductDetail: React.FC = () => {
             <div className="mt-12 space-y-6">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-3 block">Quantity</span>
-                <div className="flex items-center border border-gray-300 w-32">
+                <div className={`flex items-center border w-32 ${stockLevel === 0 ? 'border-gray-200 opacity-50' : 'border-gray-300'}`}>
                   <button 
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-3 hover:bg-gray-50 transition-colors text-gray-600"
+                    disabled={stockLevel === 0}
+                    className="p-3 hover:bg-gray-50 transition-colors text-gray-600 disabled:cursor-not-allowed"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
                   <span className="flex-1 text-center font-medium text-gray-900">{quantity}</span>
                   <button 
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="p-3 hover:bg-gray-50 transition-colors text-gray-600"
+                    onClick={() => setQuantity(stockLevel && stockLevel > 0 ? Math.min(stockLevel, quantity + 1) : quantity + 1)}
+                    disabled={stockLevel === 0 || (stockLevel !== null && quantity >= stockLevel)}
+                    className="p-3 hover:bg-gray-50 transition-colors text-gray-600 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -125,9 +147,14 @@ export const ProductDetail: React.FC = () => {
 
               <button
                 onClick={handleAddToCart}
-                className="w-full bg-black text-white py-5 text-sm font-semibold uppercase tracking-widest hover:bg-gray-900 transition-colors"
+                disabled={stockLevel === 0}
+                className={`w-full py-5 text-sm font-semibold uppercase tracking-widest transition-colors ${
+                  stockLevel === 0 
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                    : 'bg-black text-white hover:bg-gray-900'
+                }`}
               >
-                Add to Bag — ${(product.price * quantity).toFixed(2)}
+                {stockLevel === 0 ? 'Out of Stock' : `Add to Bag — $${(product.price * quantity).toFixed(2)}`}
               </button>
             </div>
 
