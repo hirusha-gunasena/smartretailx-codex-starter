@@ -250,7 +250,7 @@ Because the service consumes both shared contract workspaces, build from the rep
 Docker can copy all required workspaces:
 
 ```bash
-docker build -f services/order-service/Dockerfile -t smartretailx-order-service:dev .
+docker build -f domains/order/service/Dockerfile -t smartretailx-order-service:dev .
 docker run --rm --read-only --init --cap-drop ALL --user node \
   -e ORDERS_TABLE_NAME=smartretailx-orders-dev \
   -e COGNITO_USER_POOL_ISSUER=<existing-cognito-issuer> \

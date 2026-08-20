@@ -123,15 +123,21 @@ approval. Replace angle-bracket values deliberately—never use the synth-only p
 
    ```powershell
    $orderImageTag = git rev-parse HEAD
-   docker build --pull --file services/order-service/Dockerfile --tag "smartretailx-order-service:$orderImageTag" .
+   docker build --pull --file domains/order/service/Dockerfile --tag "smartretailx-order-service:$orderImageTag" .
    $registryHost = "<account-id>.dkr.ecr.ap-south-1.amazonaws.com"
    aws ecr get-login-password --region ap-south-1 --profile smartretailx-deploy | docker login --username AWS --password-stdin $registryHost
    docker tag "smartretailx-order-service:$orderImageTag" "$registryHost/smartretailx-order-service-dev:$orderImageTag"
    docker push "$registryHost/smartretailx-order-service-dev:$orderImageTag"
    ```
 
-8. Verify that exact immutable tag exists and review its image scan status/findings under the
-   project policy.
+8. Verify that exact immutable tag exists and that its Linux/amd64 runtime scan is complete with no
+   critical or high findings. This command is read-only and exits unsuccessfully when the tag is
+   absent or the security gate fails:
+
+   ```powershell
+   node --loader ts-node/esm infrastructure/bin/verify-order-image.ts --tag $orderImageTag --profile smartretailx-deploy --region ap-south-1
+   ```
+
 9. Supply that full Git SHA through CDK context as `orderImageTag`, re-run synthesis, and review a
    stack-scoped template-only diff for `SmartRetailX-dev-OrderService`.
 10. Obtain separate explicit approval before deploying only the service stack:

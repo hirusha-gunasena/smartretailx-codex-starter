@@ -25,19 +25,29 @@ describe('Order container image configuration', () => {
     expect(runtimeStage).toContain('USER node');
     expect(runtimeStage).toContain('EXPOSE 3000');
     expect(runtimeStage).toContain(
-      'CMD ["node", "services/order-service/dist/production-server.js"]',
+      'CMD ["node", "domains/order/service/dist/production-server.js"]',
     );
   });
 
-  test('copies only compiled workspace output from the builder stage', () => {
+  test('uses the current DDD workspace paths and copies only compiled output to runtime', () => {
     expect(dockerfile).toContain(
-      'COPY --from=builder /workspace/packages/api-contracts/dist ./packages/api-contracts/dist',
+      'COPY core/api-contracts/package.json ./core/api-contracts/package.json',
     );
     expect(dockerfile).toContain(
-      'COPY --from=builder /workspace/packages/event-contracts/dist ./packages/event-contracts/dist',
+      'COPY core/event-contracts/package.json ./core/event-contracts/package.json',
     );
     expect(dockerfile).toContain(
-      'COPY --from=builder /workspace/services/order-service/dist ./services/order-service/dist',
+      'COPY domains/order/service/package.json ./domains/order/service/package.json',
     );
+    expect(dockerfile).toContain(
+      'COPY --from=builder /workspace/core/api-contracts/dist ./core/api-contracts/dist',
+    );
+    expect(dockerfile).toContain(
+      'COPY --from=builder /workspace/core/event-contracts/dist ./core/event-contracts/dist',
+    );
+    expect(dockerfile).toContain(
+      'COPY --from=builder /workspace/domains/order/service/dist ./domains/order/service/dist',
+    );
+    expect(dockerfile).not.toMatch(/(?:COPY|CMD).*\b(?:packages|services)\//u);
   });
 });
