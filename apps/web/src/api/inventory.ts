@@ -4,7 +4,7 @@ const API_URL = import.meta.env.VITE_INVENTORY_API_URL || import.meta.env.VITE_C
 
 export interface Inventory {
   productId: string;
-  stockLevel: number;
+  availableQuantity: number;
 }
 
 export const getInventory = (productId: string): Promise<Inventory> => {

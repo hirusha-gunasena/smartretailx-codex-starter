@@ -28,7 +28,7 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredR
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId,
-          stockLevel: result.Item?.stockLevel || 0,
+          availableQuantity: result.Item?.availableQuantity || 0,
         }),
       };
     }
@@ -46,7 +46,8 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredR
           TableName: INVENTORY_TABLE,
           Item: {
             productId,
-            stockLevel: quantity,
+            availableQuantity: quantity,
+            updatedAt: new Date().toISOString(),
           },
         })
       );
@@ -54,7 +55,7 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredR
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, stockLevel: quantity }),
+        body: JSON.stringify({ productId, availableQuantity: quantity }),
       };
     }
 

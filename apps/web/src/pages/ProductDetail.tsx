@@ -12,7 +12,7 @@ export const ProductDetail: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [stockLevel, setStockLevel] = useState<number | null>(null);
+  const [availableQuantity, setAvailableQuantity] = useState<number | null>(null);
   
   const [quantity, setQuantity] = useState(1);
   const [openAccordion, setOpenAccordion] = useState<string | null>('details');
@@ -24,11 +24,11 @@ export const ProductDetail: React.FC = () => {
     
     Promise.all([
       getProduct(productId),
-      getInventory(productId).catch(() => ({ stockLevel: 0 })) // fallback if inventory fails or not found
+      getInventory(productId).catch(() => ({ availableQuantity: 0 })) // fallback if inventory fails or not found
     ])
       .then(([productData, inventoryData]) => {
         setProduct((productData as any).data || productData);
-        setStockLevel(inventoryData.stockLevel || 0);
+        setAvailableQuantity(inventoryData.availableQuantity || 0);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -105,9 +105,9 @@ export const ProductDetail: React.FC = () => {
               <p className="text-2xl font-medium text-gray-900">
                 ${product.price.toFixed(2)} <span className="text-base text-gray-500 font-normal">{product.currency}</span>
               </p>
-              {stockLevel !== null && (
-                <span className={`flex items-center text-xs font-semibold uppercase tracking-widest px-3 py-1 border ${stockLevel > 0 ? 'text-green-700 border-green-200 bg-green-50' : 'text-red-700 border-red-200 bg-red-50'}`}>
-                  {stockLevel > 0 ? (
+              {availableQuantity !== null && (
+                <span className={`flex items-center text-xs font-semibold uppercase tracking-widest px-3 py-1 border ${availableQuantity > 0 ? 'text-green-700 border-green-200 bg-green-50' : 'text-red-700 border-red-200 bg-red-50'}`}>
+                  {availableQuantity > 0 ? (
                     <><CheckCircle2 className="w-3 h-3 mr-1" /> In Stock</>
                   ) : (
                     <><XCircle className="w-3 h-3 mr-1" /> Out of Stock</>
@@ -126,18 +126,18 @@ export const ProductDetail: React.FC = () => {
             <div className="mt-12 space-y-6">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-3 block">Quantity</span>
-                <div className={`flex items-center border w-32 ${stockLevel === 0 ? 'border-gray-200 opacity-50' : 'border-gray-300'}`}>
+                <div className={`flex items-center border w-32 ${availableQuantity === 0 ? 'border-gray-200 opacity-50' : 'border-gray-300'}`}>
                   <button 
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    disabled={stockLevel === 0}
+                    disabled={availableQuantity === 0}
                     className="p-3 hover:bg-gray-50 transition-colors text-gray-600 disabled:cursor-not-allowed"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
                   <span className="flex-1 text-center font-medium text-gray-900">{quantity}</span>
                   <button 
-                    onClick={() => setQuantity(stockLevel && stockLevel > 0 ? Math.min(stockLevel, quantity + 1) : quantity + 1)}
-                    disabled={stockLevel === 0 || (stockLevel !== null && quantity >= stockLevel)}
+                    onClick={() => setQuantity(availableQuantity && availableQuantity > 0 ? Math.min(availableQuantity, quantity + 1) : quantity + 1)}
+                    disabled={availableQuantity === 0 || (availableQuantity !== null && quantity >= availableQuantity)}
                     className="p-3 hover:bg-gray-50 transition-colors text-gray-600 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />
@@ -147,14 +147,14 @@ export const ProductDetail: React.FC = () => {
 
               <button
                 onClick={handleAddToCart}
-                disabled={stockLevel === 0}
+                disabled={availableQuantity === 0}
                 className={`w-full py-5 text-sm font-semibold uppercase tracking-widest transition-colors ${
-                  stockLevel === 0 
+                  availableQuantity === 0 
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                     : 'bg-black text-white hover:bg-gray-900'
                 }`}
               >
-                {stockLevel === 0 ? 'Out of Stock' : `Add to Bag — $${(product.price * quantity).toFixed(2)}`}
+                {availableQuantity === 0 ? 'Out of Stock' : `Add to Bag — $${(product.price * quantity).toFixed(2)}`}
               </button>
             </div>
 
