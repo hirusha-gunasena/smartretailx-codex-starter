@@ -217,6 +217,7 @@ test('creates the Node.js 22 Order Workflow Lambda outside a VPC', () => {
     MemorySize: 256,
     Runtime: 'nodejs22.x',
     Timeout: 15,
+    TracingConfig: { Mode: 'Active' },
   });
 
   const [, workflowFunction] = workflowFunctionEntry();

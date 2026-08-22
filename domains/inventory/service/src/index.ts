@@ -34,12 +34,20 @@ export type {
   OrderCreatedMessageParser,
   OrderCreatedProcessor,
 } from './adapters/sqs/inventory-sqs-handler.js';
+export { ConsoleSagaTelemetry } from './adapters/telemetry/console-saga-telemetry.js';
 export {
   ORDER_CREATED_EVENTBRIDGE_SOURCE,
   eventBridgeOrderCreatedEnvelopeSchema,
   parseOrderCreatedMessage,
 } from './adapters/sqs/order-created-message-parser.js';
 export type { Clock } from './application/ports/clock.js';
+export type {
+  InventorySagaOutcome,
+  InventorySagaStage,
+  SagaInvocationContext,
+  SagaSuccessTelemetryEntry,
+  SagaTelemetry,
+} from './application/ports/saga-telemetry.js';
 export type { InventoryOutcomeEventPublisher } from './application/ports/inventory-outcome-event-publisher.js';
 export type {
   InventoryReservationRepository,

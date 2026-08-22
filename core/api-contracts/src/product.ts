@@ -1,7 +1,16 @@
 import { z } from 'zod';
 
 const productNameSchema = z.string().trim().min(1).max(200);
-const productDescriptionSchema = z.string().trim().min(1).max(2_000);
+const productDescriptionSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(10_000)
+  .refine(
+    (description) => description.split(/\s+/u).filter(Boolean).length <= 1_000,
+    'Description must contain 1000 words or fewer',
+  );
+export const productCategorySchema = z.string().trim().min(1).max(100);
 const productPriceSchema = z.number().finite().nonnegative();
 export const currencySchema = z
   .string()
@@ -16,6 +25,7 @@ export const productSchema = z
     productId: productIdSchema,
     name: productNameSchema,
     description: productDescriptionSchema.optional(),
+    category: productCategorySchema.optional(),
     price: productPriceSchema,
     currency: currencySchema,
     imageUrl: imageUrlSchema.optional(),
@@ -30,6 +40,7 @@ export const createProductRequestSchema = z
   .object({
     name: productNameSchema,
     description: productDescriptionSchema.optional(),
+    category: productCategorySchema.optional(),
     price: productPriceSchema,
     currency: currencySchema,
     imageUrl: imageUrlSchema.optional(),
@@ -42,6 +53,7 @@ export const updateProductRequestSchema = z
   .object({
     name: productNameSchema.optional(),
     description: productDescriptionSchema.optional(),
+    category: productCategorySchema.optional(),
     price: productPriceSchema.optional(),
     currency: currencySchema.optional(),
     imageUrl: imageUrlSchema.optional(),

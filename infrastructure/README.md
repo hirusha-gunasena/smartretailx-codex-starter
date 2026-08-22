@@ -12,7 +12,7 @@ For the `dev` environment, the stack synthesizes:
 
 - one API Gateway HTTP API with a single Lambda proxy integration using payload format 2.0;
 - one Node.js 22 Catalogue Lambda bundled from
-  `services/catalogue-service/src/handler.ts` with its workspace and AWS SDK dependencies;
+  `domains/catalogue/service/src/handler.ts` with its workspace and AWS SDK dependencies;
 - one DynamoDB Products table; and
 - the Lambda execution role, a seven-day CloudWatch log group, integration permissions, and
   CloudFormation outputs.
@@ -47,12 +47,12 @@ The HTTP API allows the development origin `http://localhost:5173`, the `Content
 For the `dev` environment, this stack synthesizes:
 
 - the `smartretailx-orders-dev` DynamoDB table with `orderId` as its string partition key,
-  on-demand billing, Standard table class, default DynamoDB-owned encryption, and no sort key or
-  indexes;
+  on-demand billing, Standard table class, default DynamoDB-owned encryption, point-in-time
+  recovery, and one customer access GSI;
 - a `NEW_AND_OLD_IMAGES` DynamoDB Stream, which supplies `NewImage` for inserted Orders and both
   `OldImage` and `NewImage` for lifecycle modifications;
 - the Node.js 22 `smartretailx-order-event-relay-dev` Lambda bundled from
-  `services/order-service/src/order-event-relay.ts` with its application and AWS SDK dependencies;
+  `domains/order/service/src/order-event-relay.ts` with its application and AWS SDK dependencies;
 - the custom `smartretailx-order-events-dev` EventBridge bus, with no rules or cross-account policy;
 - a seven-day relay log group; and
 - an SQS-managed encrypted relay-failure queue retained for 14 days, plus the repository-required
@@ -95,10 +95,14 @@ require private application networking for this workload, so no VPC or NAT Gatew
 stack also creates no ECS, ALB, EC2, RDS, CloudFront, customer-managed KMS key, EventBridge rules,
 or Inventory consumer resources.
 
-Development data is intentionally removable: the table, queues, and log group use `DESTROY`, table
-deletion protection and PITR are disabled, and no Global Table replica is configured. A production
-variant must use `RETAIN`, deletion protection, PITR, longer operational retention, and a reviewed
-Global Tables/disaster-recovery design.
+Development data remains intentionally removable: the table, queues, and log group use `DESTROY`
+and table deletion protection is disabled. PITR is enabled on the existing Orders table to protect
+against accidental data changes, but a production variant must also use `RETAIN`, deletion
+protection, longer operational retention, and a reviewed Global Tables/disaster-recovery design.
+
+The Order relay, Inventory consumer, Inventory outcome relay, and Order workflow Lambda emit a
+sanitized `saga.success` JSON record only after their stage succeeds. Operators can query a complete
+path using `correlationId` without logging customers, items, message bodies, tokens, or credentials.
 
 Safe outputs expose the Orders table name and stream ARN, event bus name and ARN, relay function
 name, and relay-failure queue name.
@@ -115,10 +119,10 @@ For the `dev` environment, this stack synthesizes:
 - the SQS-managed encrypted `smartretailx-inventory-orders-dlq-dev` terminal DLQ with 14-day
   retention and source-queue redrive after five receives;
 - a Node.js 22 Inventory consumer Lambda bundled from
-  `services/inventory-service/src/handler.ts`, with 256 MB memory, a 15-second timeout, and a
+  `domains/inventory/service/src/handler.ts`, with 256 MB memory, a 15-second timeout, and a
   dedicated seven-day log group;
 - a Node.js 22 Inventory Outcome Relay Lambda bundled from
-  `services/inventory-service/src/inventory-outcome-relay.ts`, with 256 MB memory, a 10-second
+  `domains/inventory/service/src/inventory-outcome-relay.ts`, with 256 MB memory, a 10-second
   timeout, and a dedicated seven-day log group;
 - the SQS-managed encrypted `smartretailx-inventory-outcome-relay-failures-dev` stream-failure
   destination with 14-day retention and its terminal DLQ;
@@ -215,7 +219,7 @@ events successfully delivered to SQS that repeatedly fail application processing
 target-delivery failures are outside Task 015.
 
 The Node.js 22 `smartretailx-order-workflow-dev` Lambda is bundled from
-`services/order-service/src/order-workflow-handler.ts` with repository-root dependency resolution.
+`domains/order/service/src/order-workflow-handler.ts` with repository-root dependency resolution.
 It has 256 MB memory, a 15-second timeout, a dedicated seven-day log group, and only
 `ORDERS_TABLE_NAME` in its application environment. Its DynamoDB policy is scoped to the existing
 Orders table and permits only `GetItem` and `UpdateItem`. The SQS integration adds the required
@@ -229,7 +233,8 @@ asynchronous Lambda DLQ or destination because SQS redrive is the failure mechan
 
 The Lambda remains outside a VPC because SQS, DynamoDB, EventBridge, and CloudWatch do not require
 private application networking for this workload. The stack adds no NAT Gateway, expensive
-always-on service, customer-managed KMS key, dashboard, alarm, or X-Ray configuration. It also has
+always-on service, customer-managed KMS key, dashboard, or alarm. Active Lambda tracing emits
+sampled invocation segments to X-Ray. The function also has
 no EventBridge publishing permission: the Orders record remains the durable source of truth, and the
 separate unified Orders CDC relay publishes `OrderConfirmed`/`OrderRejected` only after the durable
 transition.
@@ -273,10 +278,17 @@ traffic. It uses an IP target group and `/health` checks; `/health` is not an AP
 The Fargate task uses 256 CPU units, 512 MiB, desired count one, deployment rollback, and CPU target
 tracking between one and two tasks. It runs the production DynamoDB composition as non-root `node`
 with a read-only root filesystem, dropped capabilities, an init process and no ECS Exec. The task
-role has only `GetItem`, `PutItem`, and `Scan` against the existing Orders table, plus `Query` on
-the exact `customerId-createdAt-index` ARN. A separate
+role has only `GetItem`, `PutItem`, and `Scan` against the existing Orders table, `Query` on the
+exact `customerId-createdAt-index` ARN, and the two X-Ray write actions required by the telemetry
+collector. A separate
 execution role has repository pull and log-write permissions. The service has no direct
 EventBridge permission; the existing DynamoDB Stream relay remains the lifecycle publisher.
+
+The task starts a pinned AWS Distro for OpenTelemetry collector sidecar and waits for its health
+check before starting the Order container. OpenTelemetry Node auto-instrumentation captures a
+bounded 10% sample of Express, HTTP, and AWS SDK spans and sends them over the task-local OTLP
+endpoint; the collector exports those traces to X-Ray. The collector shares the existing seven-day
+container log group and does not receive credentials or expose a public listener.
 
 All three existing application routes require the reused Cognito issuer/audience and `openid`
 scope. The private integration overwrites the backend path with stage-free `$request.path`.
@@ -313,6 +325,5 @@ npm run cdk:diff
 
 The stacks create infrastructure code only. Task 017 changes only the existing Orders stream view;
 no deployment has occurred. Production hardening
-remains pending: deletion protection, `RETAIN` policies, point-in-time recovery, disaster-recovery
-configuration, production CORS origins, authentication, X-Ray, alarms, and later encryption-key
-review.
+remains pending: deletion protection, `RETAIN` policies, PITR for the non-Orders tables,
+disaster-recovery configuration, production CORS origins, and later encryption-key review.

@@ -1,27 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Truck, ShieldCheck, RefreshCw, ChevronRight } from 'lucide-react';
-
-interface Product {
-  productId: string;
-  name: string;
-  description: string;
-  price: number;
-  imageUrl?: string;
-}
+import { getProducts } from '../api/catalogue';
+import type { Product } from '../api/catalogue';
 
 export const Home: React.FC = () => {
   const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
 
   useEffect(() => {
-    fetch('https://614kzoojzg.execute-api.ap-south-1.amazonaws.com/api/v1/products')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && Array.isArray(data.data)) {
-          // Mock different sections by slicing the products list
-          setTrendingProducts(data.data.slice(0, 4));
-          setNewArrivals(data.data.slice(4, 8)); // Use different items for new arrivals
+    getProducts()
+      .then((products) => {
+        if (Array.isArray(products)) {
+          setTrendingProducts(products.slice(0, 4));
+          setNewArrivals(products.slice(4, 8));
         }
       })
       .catch((err) => console.error('Failed to load products:', err));
@@ -218,7 +210,7 @@ export const Home: React.FC = () => {
                   </h3>
                   <p className="text-sm text-gray-500 mb-2 line-clamp-1">{product.description}</p>
                   <p className="text-base font-semibold text-gray-900">
-                    ${product.price.toFixed(2)}
+                    {product.price.toFixed(2)} {product.currency}
                   </p>
                 </Link>
               ))
@@ -298,7 +290,7 @@ export const Home: React.FC = () => {
                       {product.name}
                     </h3>
                     <p className="text-sm font-semibold text-gray-500">
-                      ${product.price.toFixed(2)}
+                      {product.price.toFixed(2)} {product.currency}
                     </p>
                   </div>
                 </Link>

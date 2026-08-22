@@ -1,31 +1,61 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
-export const BASE_URL = __ENV.BASE_URL || 'https://api.dev.smartretailx.com';
-export const AUTH_TOKEN = __ENV.AUTH_TOKEN || 'ENTER_TOKEN_HERE';
-export const PRODUCT_ID = __ENV.PRODUCT_ID || 'sample-product-id';
+const requiredBaseUrl = (__ENV.BASE_URL || '').trim();
+if (!/^https?:\/\/[^\s/]+/u.test(requiredBaseUrl)) {
+  throw new Error('BASE_URL must be set to the deployed Catalogue API endpoint.');
+}
+
+export const BASE_URL = requiredBaseUrl.replace(/\/+$/u, '');
+export const AUTH_TOKEN = (__ENV.AUTH_TOKEN || '').trim();
+export const PRODUCT_ID = (__ENV.PRODUCT_ID || '').trim();
+
+if (/ENTER_TOKEN_HERE/iu.test(AUTH_TOKEN)) {
+  throw new Error('AUTH_TOKEN contains a placeholder instead of an ephemeral token.');
+}
 
 export const commonHeaders = {
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${AUTH_TOKEN}`,
+  Accept: 'application/json',
+  ...(AUTH_TOKEN.length > 0 ? { Authorization: `Bearer ${AUTH_TOKEN}` } : {}),
 };
 
 export function checkResponse(res, name) {
-  check(res, {
-    [`${name} is status 200 or 201`]: (r) => r.status === 200 || r.status === 201,
+  return check(res, {
+    [`${name} is status 200`]: (response) => response.status === 200,
   });
 }
 
 export function browseCatalogue() {
-  const res = http.get(`${BASE_URL}/api/v1/catalogue`);
-  checkResponse(res, 'List Products');
+  const listResponse = http.get(`${BASE_URL}/api/v1/products`, {
+    headers: commonHeaders,
+    tags: { operation: 'ListProducts' },
+  });
+  if (!checkResponse(listResponse, 'List Products')) {
+    return;
+  }
 
-  if (res.status === 200) {
-    const products = res.json();
-    if (products && products.length > 0) {
-      const productId = products[0].id;
-      const detailRes = http.get(`${BASE_URL}/api/v1/catalogue/${productId}`);
-      checkResponse(detailRes, 'Get Product Detail');
-    }
+  let payload;
+  try {
+    payload = listResponse.json();
+  } catch {
+    check(null, { 'List Products returns JSON': () => false });
+    return;
+  }
+
+  const products = payload?.data;
+  if (!check(products, { 'List Products returns the standard data array': Array.isArray })) {
+    return;
+  }
+
+  const productId = PRODUCT_ID || products[0]?.productId;
+  if (typeof productId === 'string' && productId.length > 0) {
+    const detailResponse = http.get(
+      `${BASE_URL}/api/v1/products/${encodeURIComponent(productId)}`,
+      {
+        headers: commonHeaders,
+        tags: { operation: 'GetProduct' },
+      },
+    );
+    checkResponse(detailResponse, 'Get Product Detail');
   }
 }

@@ -41,13 +41,12 @@ export const handler: Handler<APIGatewayProxyEventV2, APIGatewayProxyStructuredR
 
     if (method === 'PATCH' || method === 'PUT') {
       const body = JSON.parse(event.body || '{}');
-      const quantity =
-        typeof body.quantity === 'number' ? body.quantity : parseInt(body.quantity, 10);
+      const quantity = typeof body.quantity === 'number' ? body.quantity : Number(body.quantity);
 
-      if (isNaN(quantity)) {
+      if (!Number.isSafeInteger(quantity) || quantity < 0) {
         return {
           statusCode: 400,
-          body: JSON.stringify({ message: 'quantity must be a valid number' }),
+          body: JSON.stringify({ message: 'quantity must be a non-negative integer' }),
         };
       }
 

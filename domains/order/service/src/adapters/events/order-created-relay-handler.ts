@@ -5,11 +5,18 @@ import type {
   DynamoDBStreamEvent,
 } from 'aws-lambda';
 import type { EventPublisher } from '../../application/ports/event-publisher.js';
+import type {
+  SagaInvocationContext,
+  SagaTelemetry,
+} from '../../application/ports/saga-telemetry.js';
 import { mapOrderStreamRecord } from './dynamodb-order-stream-mapper.js';
 import type { OrderLifecycleEvent } from './dynamodb-order-stream-mapper.js';
 
+const noOpSagaTelemetry: SagaTelemetry = { recordSuccess: () => undefined };
+
 export type OrderLifecycleRelayHandler = (
   event: DynamoDBStreamEvent,
+  context?: SagaInvocationContext,
 ) => Promise<DynamoDBBatchResponse>;
 
 /** Retained for existing Task 008 imports; the handler now relays the full Order lifecycle. */
@@ -29,23 +36,45 @@ export class UnreportableStreamRecordFailureError extends Error {
 export const processOrderStreamRecord = async (
   record: DynamoDBRecord,
   publisher: EventPublisher<OrderLifecycleEvent>,
-): Promise<void> => {
+): Promise<OrderLifecycleEvent | null> => {
   const event = mapOrderStreamRecord(record);
 
   if (event !== null) {
     await publisher.publish(event);
   }
+
+  return event;
 };
 
 export const createOrderLifecycleRelayHandler =
-  (publisher: EventPublisher<OrderLifecycleEvent>): OrderLifecycleRelayHandler =>
-  async (event: DynamoDBStreamEvent): Promise<DynamoDBBatchResponse> => {
+  (
+    publisher: EventPublisher<OrderLifecycleEvent>,
+    telemetry: SagaTelemetry = noOpSagaTelemetry,
+  ): OrderLifecycleRelayHandler =>
+  async (
+    event: DynamoDBStreamEvent,
+    context?: SagaInvocationContext,
+  ): Promise<DynamoDBBatchResponse> => {
     const batchItemFailures: DynamoDBBatchItemFailure[] = [];
     const unreportableRecordIndexes: number[] = [];
 
     for (const [index, record] of event.Records.entries()) {
       try {
-        await processOrderStreamRecord(record, publisher);
+        const lifecycleEvent = await processOrderStreamRecord(record, publisher);
+        if (lifecycleEvent !== null) {
+          telemetry.recordSuccess({
+            event: 'saga.success',
+            stage: 'ORDER_LIFECYCLE_RELAY',
+            outcome: 'PUBLISHED',
+            requestId: context?.awsRequestId ?? 'unavailable',
+            eventId: lifecycleEvent.eventId,
+            eventType: lifecycleEvent.eventType,
+            eventVersion: lifecycleEvent.eventVersion,
+            occurredAt: lifecycleEvent.occurredAt,
+            correlationId: lifecycleEvent.correlationId,
+            orderId: lifecycleEvent.data.orderId,
+          });
+        }
       } catch {
         const sequenceNumber = record.dynamodb?.SequenceNumber?.trim();
 

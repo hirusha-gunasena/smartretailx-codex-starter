@@ -30,6 +30,17 @@ interface ProductWithInventory extends Product {
   availableQuantity: number;
 }
 
+const CURRENCIES = ['USD', 'LKR'] as const;
+const MAX_DESCRIPTION_WORDS = 1_000;
+
+const wordCount = (value: string): number => value.trim().split(/\s+/u).filter(Boolean).length;
+const isNonNegativeInteger = (value: string): boolean =>
+  /^\d+$/u.test(value.trim()) && Number.isSafeInteger(Number(value)) && Number(value) >= 0;
+const isNonNegativePrice = (value: string): boolean => {
+  const parsed = Number(value);
+  return value.trim() !== '' && Number.isFinite(parsed) && parsed >= 0;
+};
+
 export const AdminProducts: React.FC = () => {
   const [products, setProducts] = useState<ProductWithInventory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +65,7 @@ export const AdminProducts: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    category: '',
     price: '',
     currency: 'USD',
     imageUrl: '',
@@ -163,9 +175,10 @@ export const AdminProducts: React.FC = () => {
 
   const handleBulkUpdateQuantity = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isNonNegativeInteger(bulkQuantity)) return;
     const loadingToast = toast.loading('Updating inventory...');
     try {
-      const qty = parseInt(bulkQuantity, 10) || 0;
+      const qty = Number(bulkQuantity);
       await Promise.all(Array.from(selectedIds).map((id) => setInventory(id, qty)));
       toast.success(`Updated inventory for ${selectedIds.size} products`, { id: loadingToast });
       setIsBulkUpdateModalOpen(false);
@@ -182,6 +195,7 @@ export const AdminProducts: React.FC = () => {
       setFormData({
         name: product.name,
         description: product.description || '',
+        category: product.category || '',
         price: product.price.toString(),
         currency: product.currency,
         imageUrl: product.imageUrl || '',
@@ -193,6 +207,7 @@ export const AdminProducts: React.FC = () => {
       setFormData({
         name: '',
         description: '',
+        category: '',
         price: '',
         currency: 'USD',
         imageUrl: '',
@@ -209,22 +224,24 @@ export const AdminProducts: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isFormValid) return;
     try {
       const payload = {
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        category: formData.category.trim(),
         price: parseFloat(formData.price),
         currency: formData.currency,
         imageUrl: formData.imageUrl,
+        ...(formData.description.trim() ? { description: formData.description.trim() } : {}),
       };
 
       if (editingProduct) {
         await updateProduct(editingProduct.productId, payload);
-        await setInventory(editingProduct.productId, parseInt(formData.quantity) || 0);
+        await setInventory(editingProduct.productId, Number(formData.quantity));
         toast.success('Product updated successfully');
       } else {
         const newProduct = await createProduct(payload);
-        await setInventory(newProduct.productId, parseInt(formData.quantity) || 0);
+        await setInventory(newProduct.productId, Number(formData.quantity));
         toast.success('Product created successfully');
       }
       handleCloseModal();
@@ -234,6 +251,16 @@ export const AdminProducts: React.FC = () => {
       toast.error(errorMessage);
     }
   };
+
+  const isFormValid =
+    formData.name.trim().length > 0 &&
+    formData.name.trim().length <= 200 &&
+    formData.category.trim().length > 0 &&
+    formData.category.trim().length <= 100 &&
+    isNonNegativePrice(formData.price) &&
+    isNonNegativeInteger(formData.quantity) &&
+    CURRENCIES.includes(formData.currency as (typeof CURRENCIES)[number]) &&
+    wordCount(formData.description) <= MAX_DESCRIPTION_WORDS;
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
@@ -431,7 +458,7 @@ export const AdminProducts: React.FC = () => {
                           <img
                             src={product.imageUrl}
                             alt={product.name}
-                            className="w-10 h-10 object-cover border border-gray-200"
+                            className="w-10 h-10 object-contain p-1 border border-gray-200"
                           />
                         ) : (
                           <div className="w-10 h-10 bg-gray-100 border border-gray-200 flex items-center justify-center">
@@ -459,7 +486,7 @@ export const AdminProducts: React.FC = () => {
                     </td>
                     <td className="p-4 text-sm text-gray-900">{product.availableQuantity} units</td>
                     <td className="p-4 text-sm font-medium text-gray-900">
-                      ${product.price.toFixed(2)}{' '}
+                      {product.price.toFixed(2)}{' '}
                       <span className="text-gray-400 font-normal">{product.currency}</span>
                     </td>
                     <td className="p-4 text-right">
@@ -538,6 +565,7 @@ export const AdminProducts: React.FC = () => {
                   <input
                     type="text"
                     required
+                    maxLength={200}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full border border-gray-200 p-3 text-sm focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
@@ -549,8 +577,28 @@ export const AdminProducts: React.FC = () => {
                   </label>
                   <textarea
                     rows={3}
+                    maxLength={10_000}
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full border border-gray-200 p-3 text-sm focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
+                  />
+                  <p
+                    className={`text-xs mt-1 ${wordCount(formData.description) > MAX_DESCRIPTION_WORDS ? 'text-red-600' : 'text-gray-400'}`}
+                  >
+                    {wordCount(formData.description)} / {MAX_DESCRIPTION_WORDS} words
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={100}
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="e.g. Laptops"
                     className="w-full border border-gray-200 p-3 text-sm focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
                   />
                 </div>
@@ -562,6 +610,7 @@ export const AdminProducts: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
+                      min="0"
                       required
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
@@ -575,6 +624,7 @@ export const AdminProducts: React.FC = () => {
                     <input
                       type="number"
                       step="1"
+                      min="0"
                       required
                       value={formData.quantity}
                       onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
@@ -586,13 +636,18 @@ export const AdminProducts: React.FC = () => {
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
                     Currency
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
                     value={formData.currency}
                     onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                     className="w-full border border-gray-200 p-3 text-sm focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
-                  />
+                  >
+                    {CURRENCIES.map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
@@ -603,7 +658,7 @@ export const AdminProducts: React.FC = () => {
                       <img
                         src={formData.imageUrl}
                         alt="Preview"
-                        className="w-20 h-20 object-cover border border-gray-200 shadow-sm"
+                        className="w-20 h-20 object-contain p-1 border border-gray-200 shadow-sm"
                       />
                     )}
                     <div className="flex-1">
@@ -653,7 +708,7 @@ export const AdminProducts: React.FC = () => {
               <button
                 type="submit"
                 form="product-form"
-                disabled={isUploading}
+                disabled={isUploading || !isFormValid}
                 className="bg-black text-white px-8 py-2.5 text-xs font-semibold uppercase tracking-widest hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
               >
                 {isUploading
@@ -684,6 +739,7 @@ export const AdminProducts: React.FC = () => {
                 <input
                   type="number"
                   step="1"
+                  min="0"
                   required
                   value={bulkQuantity}
                   onChange={(e) => setBulkQuantity(e.target.value)}
@@ -700,6 +756,7 @@ export const AdminProducts: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                  disabled={!isNonNegativeInteger(bulkQuantity)}
                   className="bg-black text-white px-6 py-2 text-xs font-semibold uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-sm"
                 >
                   Apply

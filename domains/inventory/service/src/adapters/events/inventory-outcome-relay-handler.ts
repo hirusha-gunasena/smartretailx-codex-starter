@@ -5,10 +5,18 @@ import type {
   DynamoDBStreamEvent,
 } from 'aws-lambda';
 import type { InventoryOutcomeEventPublisher } from '../../application/ports/inventory-outcome-event-publisher.js';
+import type {
+  SagaInvocationContext,
+  SagaTelemetry,
+} from '../../application/ports/saga-telemetry.js';
 import { mapInventoryOutcomeStreamRecord } from './inventory-outcome-stream-mapper.js';
+import type { InventoryOutcomeEvent } from './inventory-outcome-stream-mapper.js';
+
+const noOpSagaTelemetry: SagaTelemetry = { recordSuccess: () => undefined };
 
 export type InventoryOutcomeRelayHandler = (
   event: DynamoDBStreamEvent,
+  context?: SagaInvocationContext,
 ) => Promise<DynamoDBBatchResponse>;
 
 export class UnreportableStreamRecordFailureError extends Error {
@@ -25,26 +33,44 @@ export class UnreportableStreamRecordFailureError extends Error {
 export const processInventoryOutcomeRecord = async (
   record: DynamoDBRecord,
   publisher: InventoryOutcomeEventPublisher,
-): Promise<void> => {
+): Promise<InventoryOutcomeEvent | null> => {
   const event = mapInventoryOutcomeStreamRecord(record);
 
   if (event !== null) {
     await publisher.publish(event);
   }
+
+  return event;
 };
 
 export const createInventoryOutcomeRelayHandler = (
   publisher: InventoryOutcomeEventPublisher,
+  telemetry: SagaTelemetry = noOpSagaTelemetry,
 ): InventoryOutcomeRelayHandler =>
   async function inventoryOutcomeRelayHandler(
     event: DynamoDBStreamEvent,
+    context?: SagaInvocationContext,
   ): Promise<DynamoDBBatchResponse> {
     const batchItemFailures: DynamoDBBatchItemFailure[] = [];
     const unreportableRecordIndexes: number[] = [];
 
     for (const [index, record] of event.Records.entries()) {
       try {
-        await processInventoryOutcomeRecord(record, publisher);
+        const inventoryOutcome = await processInventoryOutcomeRecord(record, publisher);
+        if (inventoryOutcome !== null) {
+          telemetry.recordSuccess({
+            event: 'saga.success',
+            stage: 'INVENTORY_OUTCOME_RELAY',
+            outcome: 'PUBLISHED',
+            requestId: context?.awsRequestId ?? 'unavailable',
+            eventId: inventoryOutcome.eventId,
+            eventType: inventoryOutcome.eventType,
+            eventVersion: inventoryOutcome.eventVersion,
+            occurredAt: inventoryOutcome.occurredAt,
+            correlationId: inventoryOutcome.correlationId,
+            orderId: inventoryOutcome.data.orderId,
+          });
+        }
       } catch {
         const sequenceNumber = record.dynamodb?.SequenceNumber?.trim();
 

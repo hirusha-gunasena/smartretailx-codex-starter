@@ -163,8 +163,6 @@ paths:
   /inventory/{productId}:
     get:
       summary: Get product inventory
-      security:
-        - bearerAuth: []
       parameters:
         - name: productId
           in: path
@@ -197,7 +195,12 @@ components:
         description:
           type: string
           minLength: 1
-          maxLength: 2000
+          maxLength: 10000
+          description: Maximum 1000 words.
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
         price:
           type: number
           minimum: 0
@@ -225,7 +228,12 @@ components:
         description:
           type: string
           minLength: 1
-          maxLength: 2000
+          maxLength: 10000
+          description: Maximum 1000 words.
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
         price:
           type: number
           minimum: 0
@@ -247,7 +255,12 @@ components:
         description:
           type: string
           minLength: 1
-          maxLength: 2000
+          maxLength: 10000
+          description: Maximum 1000 words.
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
         price:
           type: number
           minimum: 0

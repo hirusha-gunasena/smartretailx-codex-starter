@@ -43,6 +43,25 @@ describe('product API contracts', () => {
     expect(updateProductRequestSchema.safeParse({ price: 69.99 }).success).toBe(true);
   });
 
+  test('accepts a category and rejects descriptions over 1000 words', () => {
+    expect(
+      createProductRequestSchema.safeParse({
+        name: 'Wireless Keyboard',
+        category: 'Accessories',
+        price: 79.99,
+        currency: 'USD',
+      }).success,
+    ).toBe(true);
+    expect(
+      createProductRequestSchema.safeParse({
+        name: 'Wireless Keyboard',
+        description: Array.from({ length: 1_001 }, () => 'word').join(' '),
+        price: 79.99,
+        currency: 'USD',
+      }).success,
+    ).toBe(false);
+  });
+
   test('rejects an empty update request', () => {
     expect(updateProductRequestSchema.safeParse({}).success).toBe(false);
   });

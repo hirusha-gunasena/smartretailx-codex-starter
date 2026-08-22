@@ -1,6 +1,6 @@
 # Final Regression Summary
 
-This folder contains a comprehensive breakdown of the system state for the SmartRetailX Codex assessment.
+This folder contains a comprehensive breakdown of the SmartRetailX system state at final review.
 
 ## Test Results
 

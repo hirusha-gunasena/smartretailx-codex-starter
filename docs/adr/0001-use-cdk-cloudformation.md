@@ -12,7 +12,7 @@ Author infrastructure in TypeScript using AWS CDK v2. CDK synthesizes CloudForma
 
 - AWS-only architecture
 - One primary language across application and infrastructure
-- Strong compatibility with Codex-assisted development
+- Strong TypeScript support across application and infrastructure code
 - Native change review through `cdk diff` and CloudFormation change sets
 - No separate Terraform state backend
 

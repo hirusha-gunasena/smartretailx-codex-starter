@@ -162,7 +162,7 @@ export const OrderDetail: React.FC = () => {
           <div className="p-8 bg-gray-50 flex justify-between items-center">
             <span className="font-bold text-gray-900">Total</span>
             <span className="font-bold text-lg text-gray-900">
-              ${order.totalAmount.toFixed(2)} {order.currency}
+              {order.totalAmount.toFixed(2)} {order.currency}
             </span>
           </div>
         </div>

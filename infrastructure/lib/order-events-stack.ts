@@ -59,7 +59,7 @@ export class OrderEventsStack extends cdk.Stack {
       dynamoStream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
       deletionProtection: false,
       pointInTimeRecoverySpecification: {
-        pointInTimeRecoveryEnabled: false,
+        pointInTimeRecoveryEnabled: true,
       },
       encryption: dynamodb.TableEncryptionV2.dynamoOwnedKey(),
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -119,6 +119,7 @@ export class OrderEventsStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
+      tracing: lambda.Tracing.ACTIVE,
       environment: {
         ORDER_EVENT_BUS_NAME: this.eventBus.eventBusName,
       },

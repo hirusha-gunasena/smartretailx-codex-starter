@@ -2,6 +2,7 @@ import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { DynamoDBInventoryReservationRepository } from '../adapters/dynamodb/dynamodb-inventory-reservation-repository.js';
 import { createInventorySqsHandler } from '../adapters/sqs/inventory-sqs-handler.js';
 import type { InventorySqsHandler } from '../adapters/sqs/inventory-sqs-handler.js';
+import { ConsoleSagaTelemetry } from '../adapters/telemetry/console-saga-telemetry.js';
 import type { Clock } from '../application/ports/clock.js';
 import { ProcessOrderCreated } from '../application/process-order-created.js';
 import type { InventoryServiceConfiguration } from './configuration.js';
@@ -24,5 +25,5 @@ export const createProductionInventoryHandler = (
   );
   const processor = new ProcessOrderCreated(repository, clock);
 
-  return createInventorySqsHandler(processor);
+  return createInventorySqsHandler(processor, new ConsoleSagaTelemetry());
 };

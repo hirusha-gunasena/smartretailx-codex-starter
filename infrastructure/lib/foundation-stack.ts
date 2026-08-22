@@ -7,11 +7,11 @@ export class FoundationStack extends cdk.Stack {
 
     cdk.Validations.of(this).acknowledge({
       id: 'CloudFormation-Validate::F0001',
-      reason: 'The foundation scaffold intentionally has no Resources section.',
+      reason: 'The foundation stack intentionally has no Resources section.',
     });
 
     new cdk.CfnOutput(this, 'Status', {
-      value: 'Repository scaffold ready. Implement bounded stacks from CODEX_TASKS.md.',
+      value: 'SmartRetailX foundation stack synthesized successfully.',
     });
   }
 }

@@ -4,7 +4,12 @@ import {
   UnreportableStreamRecordFailureError,
   createOrderLifecycleRelayHandler,
 } from '../../src/index.js';
-import type { EventPublisher, OrderLifecycleEvent } from '../../src/index.js';
+import type {
+  EventPublisher,
+  OrderLifecycleEvent,
+  SagaSuccessTelemetryEntry,
+  SagaTelemetry,
+} from '../../src/index.js';
 import {
   SECOND_ORDER_ID,
   confirmedOrderFixture,
@@ -50,13 +55,46 @@ describe('createOrderLifecycleRelayHandler', () => {
 
   test('publishes one successful INSERT', async () => {
     publish.mockResolvedValue();
-    const handler = createOrderLifecycleRelayHandler(publisher);
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const telemetry: SagaTelemetry = { recordSuccess };
+    const handler = createOrderLifecycleRelayHandler(publisher, telemetry);
 
-    await expect(handler(streamEventFixture([streamRecordFixture()]))).resolves.toEqual({
-      batchItemFailures: [],
-    });
+    await expect(
+      handler(streamEventFixture([streamRecordFixture()]), {
+        awsRequestId: 'order-relay-request-id',
+      }),
+    ).resolves.toEqual({ batchItemFailures: [] });
     expect(publish).toHaveBeenCalledTimes(1);
-    expect(publish.mock.calls[0]![0].eventType).toBe('OrderCreated');
+    const publishedEvent = publish.mock.calls[0]![0];
+    expect(publishedEvent.eventType).toBe('OrderCreated');
+    expect(recordSuccess).toHaveBeenCalledWith({
+      event: 'saga.success',
+      stage: 'ORDER_LIFECYCLE_RELAY',
+      outcome: 'PUBLISHED',
+      requestId: 'order-relay-request-id',
+      eventId: publishedEvent.eventId,
+      eventType: publishedEvent.eventType,
+      eventVersion: publishedEvent.eventVersion,
+      occurredAt: publishedEvent.occurredAt,
+      correlationId: publishedEvent.correlationId,
+      orderId: publishedEvent.data.orderId,
+    });
+    expect(JSON.stringify(recordSuccess.mock.calls[0]![0])).not.toMatch(
+      /customerId|items|authorization|token|password/iu,
+    );
+  });
+
+  test('does not emit success telemetry when publication fails', async () => {
+    publish.mockRejectedValue(new Error('publication failed'));
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const handler = createOrderLifecycleRelayHandler(publisher, { recordSuccess });
+
+    await expect(
+      handler(streamEventFixture([withSequence(streamRecordFixture(), SEQUENCE_ONE)]), {
+        awsRequestId: 'failed-order-relay-request-id',
+      }),
+    ).resolves.toEqual({ batchItemFailures: [{ itemIdentifier: SEQUENCE_ONE }] });
+    expect(recordSuccess).not.toHaveBeenCalled();
   });
 
   test('ignores a valid state-preserving MODIFY without reporting a failure', async () => {

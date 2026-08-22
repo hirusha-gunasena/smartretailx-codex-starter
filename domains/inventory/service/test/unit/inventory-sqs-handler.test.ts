@@ -1,7 +1,12 @@
 import type { OrderCreatedEvent } from '@smartretailx/event-contracts';
 import { jest } from '@jest/globals';
 import { createInventorySqsHandler } from '../../src/index.js';
-import type { InventoryReservationResult, OrderCreatedProcessor } from '../../src/index.js';
+import type {
+  InventoryReservationResult,
+  OrderCreatedProcessor,
+  SagaSuccessTelemetryEntry,
+  SagaTelemetry,
+} from '../../src/index.js';
 import {
   eventBridgeEnvelopeFixture,
   eventBridgeMessageBodyFixture,
@@ -34,30 +39,68 @@ describe('createInventorySqsHandler', () => {
 
   test('treats one successful reservation as successful message processing', async () => {
     execute.mockResolvedValue(reservedResult());
-    const handler = createInventorySqsHandler(processor);
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const telemetry: SagaTelemetry = { recordSuccess };
+    const handler = createInventorySqsHandler(processor, telemetry);
 
-    await expect(handler(sqsEventFixture([sqsRecordFixture('message-1')]))).resolves.toEqual({
-      batchItemFailures: [],
-    });
+    await expect(
+      handler(sqsEventFixture([sqsRecordFixture('message-1')]), {
+        awsRequestId: 'inventory-request-id',
+      }),
+    ).resolves.toEqual({ batchItemFailures: [] });
     expect(execute).toHaveBeenCalledTimes(1);
+    const orderCreated = execute.mock.calls[0]![0];
+    expect(recordSuccess).toHaveBeenCalledWith({
+      event: 'saga.success',
+      stage: 'INVENTORY_RESERVATION',
+      outcome: 'RESERVED',
+      requestId: 'inventory-request-id',
+      eventId: orderCreated.eventId,
+      eventType: orderCreated.eventType,
+      eventVersion: orderCreated.eventVersion,
+      occurredAt: orderCreated.occurredAt,
+      correlationId: orderCreated.correlationId,
+      orderId: orderCreated.data.orderId,
+    });
   });
 
   test('treats a durable business rejection as successful message processing', async () => {
     execute.mockResolvedValue({ reservation: rejectedReservationFixture(), idempotent: false });
-    const handler = createInventorySqsHandler(processor);
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const handler = createInventorySqsHandler(processor, { recordSuccess });
 
     await expect(handler(sqsEventFixture([sqsRecordFixture('message-1')]))).resolves.toEqual({
       batchItemFailures: [],
     });
+    expect(recordSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: 'REJECTED', stage: 'INVENTORY_RESERVATION' }),
+    );
   });
 
   test('treats a duplicate as successful message processing', async () => {
     execute.mockResolvedValue(reservedResult(true));
-    const handler = createInventorySqsHandler(processor);
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const handler = createInventorySqsHandler(processor, { recordSuccess });
 
     await expect(handler(sqsEventFixture([sqsRecordFixture('message-1')]))).resolves.toEqual({
       batchItemFailures: [],
     });
+    expect(recordSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: 'DUPLICATE', stage: 'INVENTORY_RESERVATION' }),
+    );
+  });
+
+  test('does not emit success telemetry for failed processing', async () => {
+    execute.mockRejectedValue(new Error('DynamoDB unavailable'));
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const handler = createInventorySqsHandler(processor, { recordSuccess });
+
+    await expect(
+      handler(sqsEventFixture([sqsRecordFixture('failed-message')]), {
+        awsRequestId: 'failed-inventory-request-id',
+      }),
+    ).resolves.toEqual({ batchItemFailures: [{ itemIdentifier: 'failed-message' }] });
+    expect(recordSuccess).not.toHaveBeenCalled();
   });
 
   test('processes multiple successful messages', async () => {

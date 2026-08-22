@@ -59,6 +59,7 @@ export type {
 } from './adapters/events/order-workflow-sqs-handler.js';
 export { InMemoryOrderRepository } from './adapters/persistence/in-memory-order-repository.js';
 export { ConsoleOrderAuthorizationTelemetry } from './adapters/telemetry/console-order-authorization-telemetry.js';
+export { ConsoleSagaTelemetry } from './adapters/telemetry/console-saga-telemetry.js';
 
 export { CreateOrder } from './application/create-order.js';
 export { GetOrder } from './application/get-order.js';
@@ -68,6 +69,13 @@ export type { InventoryOutcomeEvent } from './application/process-inventory-outc
 export type { Clock } from './application/ports/clock.js';
 export type { EventPublisher } from './application/ports/event-publisher.js';
 export type { IdGenerator } from './application/ports/id-generator.js';
+export type {
+  OrderSagaOutcome,
+  OrderSagaStage,
+  SagaInvocationContext,
+  SagaSuccessTelemetryEntry,
+  SagaTelemetry,
+} from './application/ports/saga-telemetry.js';
 export type {
   OrderAuthorizationReasonCode,
   OrderAuthorizationTelemetry,

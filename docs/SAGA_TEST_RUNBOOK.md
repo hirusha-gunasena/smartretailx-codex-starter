@@ -279,12 +279,12 @@ function New-SagaFixture {
 const { randomUUID } = require("node:crypto");
 
 (async () => {
-  const { pendingOrderSchema } = await import("./packages/api-contracts/dist/index.js");
+  const { pendingOrderSchema } = await import("./core/api-contracts/dist/index.js");
   const { inventoryItemSchema } = await import(
-    "./services/inventory-service/dist/domain/inventory-item.js"
+    "./domains/inventory/service/dist/domain/inventory-item.js"
   );
   const { createOrderCreatedEventId } = await import(
-    "./services/order-service/dist/adapters/events/dynamodb-order-stream-mapper.js"
+    "./domains/order/service/dist/adapters/events/dynamodb-order-stream-mapper.js"
   );
 
   const mode = process.env.SAGA_TEST_MODE;
@@ -447,7 +447,7 @@ const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
 
 (async () => {
   const { inventoryItemSchema } = await import(
-    "./services/inventory-service/dist/domain/inventory-item.js"
+    "./domains/inventory/service/dist/domain/inventory-item.js"
   );
   const client = DynamoDBDocumentClient.from(
     new DynamoDBClient({ region: process.env.AWS_REGION, maxAttempts: 2 })
@@ -490,7 +490,7 @@ const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
 
 (async () => {
-  const { orderSchema } = await import("./packages/api-contracts/dist/index.js");
+  const { orderSchema } = await import("./core/api-contracts/dist/index.js");
   const client = DynamoDBDocumentClient.from(
     new DynamoDBClient({ region: process.env.AWS_REGION, maxAttempts: 2 })
   );
@@ -552,12 +552,12 @@ const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
 
 (async () => {
-  const { orderSchema } = await import("./packages/api-contracts/dist/index.js");
+  const { orderSchema } = await import("./core/api-contracts/dist/index.js");
   const { inventoryItemSchema } = await import(
-    "./services/inventory-service/dist/domain/inventory-item.js"
+    "./domains/inventory/service/dist/domain/inventory-item.js"
   );
   const { inventoryReservationSchema } = await import(
-    "./services/inventory-service/dist/domain/inventory-reservation.js"
+    "./domains/inventory/service/dist/domain/inventory-reservation.js"
   );
   const client = DynamoDBDocumentClient.from(
     new DynamoDBClient({ region: process.env.AWS_REGION, maxAttempts: 2 })
@@ -918,16 +918,16 @@ const { marshall } = require("@aws-sdk/util-dynamodb");
 
 (async () => {
   const { orderSchema, pendingOrderSchema } = await import(
-    "./packages/api-contracts/dist/index.js"
+    "./core/api-contracts/dist/index.js"
   );
   const { inventoryReservationSchema } = await import(
-    "./services/inventory-service/dist/domain/inventory-reservation.js"
+    "./domains/inventory/service/dist/domain/inventory-reservation.js"
   );
   const { mapOrderStreamRecord } = await import(
-    "./services/order-service/dist/adapters/events/dynamodb-order-stream-mapper.js"
+    "./domains/order/service/dist/adapters/events/dynamodb-order-stream-mapper.js"
   );
   const { mapInventoryOutcomeStreamRecord } = await import(
-    "./services/inventory-service/dist/adapters/events/inventory-outcome-stream-mapper.js"
+    "./domains/inventory/service/dist/adapters/events/inventory-outcome-stream-mapper.js"
   );
   const client = DynamoDBDocumentClient.from(
     new DynamoDBClient({ region: process.env.AWS_REGION, maxAttempts: 2 })

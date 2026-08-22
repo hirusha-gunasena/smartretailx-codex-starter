@@ -52,6 +52,13 @@ test('creates a secure email-based development User Pool with optional TOTP MFA'
   expect(pools[0]?.Properties).not.toHaveProperty('SmsConfiguration');
 });
 
+test('enables active X-Ray tracing on the Admin API Lambda', () => {
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    FunctionName: 'smartretailx-admin-api-dev',
+    TracingConfig: { Mode: 'Active' },
+  });
+});
+
 test('creates customer and admin groups without IAM roles', () => {
   template.resourceCountIs('AWS::Cognito::UserPoolGroup', 2);
   template.hasResourceProperties('AWS::Cognito::UserPoolGroup', {

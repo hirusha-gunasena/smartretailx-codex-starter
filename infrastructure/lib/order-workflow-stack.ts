@@ -92,6 +92,7 @@ export class OrderWorkflowStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
       timeout: cdk.Duration.seconds(15),
+      tracing: lambda.Tracing.ACTIVE,
       environment: {
         ORDERS_TABLE_NAME: props.ordersTable.tableName,
       },

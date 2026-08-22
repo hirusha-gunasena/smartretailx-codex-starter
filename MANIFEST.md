@@ -1,39 +1,41 @@
-# Starter Pack Manifest
+# SmartRetailX Source Package Manifest
 
-## Codex guidance
+## Application source
 
-- `AGENTS.md`
-- `CODEX_TASKS.md`
-- `CODEX_PROMPTS.md`
+- `apps/web` - React and Vite frontend
+- `domains/auth/service` - Cognito administration Lambda source
+- `domains/catalogue/service` - Product Catalogue Lambda source
+- `domains/inventory/service` - Inventory API, SQS consumer, and outcome relay source
+- `domains/order/service` - Express Order API and Order workflow Lambda source
+- `core/api-contracts` - shared API schemas and types
+- `core/event-contracts` - versioned event envelopes and schemas
 
-## Product and architecture
+## Interfaces and deployment
 
-- `PROJECT_SPEC.md`
-- `ARCHITECTURE.md`
-- `ROADMAP.md`
-- `docs/requirements-traceability.md`
-- `docs/adr/*`
+- `openapi/smartretailx-api.yaml` - OpenAPI 3.0 definition
+- `domains/order/service/Dockerfile` - Order service container definition
+- `domains/order/service/.dockerignore` - container build exclusions
+- `infrastructure` - AWS CDK v2 application, stacks, tests, and configuration
 
-## Engineering controls
+Kubernetes manifests are not included because this implementation deploys with AWS CDK and
+CloudFormation to Lambda and ECS Fargate.
 
-- `TEST_STRATEGY.md`
-- `SECURITY.md`
-- `COST_GUARDRAILS.md`
-- `DEPLOYMENT.md`
-- `CONTRIBUTING.md`
+## Testing
 
-## Repository configuration
+- Unit and HTTP tests colocated with each workspace
+- `tests/postman` - Postman collection, Newman instructions, and environment template
+- `tests/performance` - k6 baseline, load, stress, and spike scenarios
+- `tests/integration` and `tests/end-to-end` - integration and workflow test assets
+- `TEST_STRATEGY.md` - test approach and commands
 
-- `package.json`
-- `tsconfig.base.json`
-- `eslint.config.mjs`
-- `.prettierrc.json`
-- `.env.example`
-- `.gitignore`
-- `.github/workflows/ci.yml`
+## Documentation and configuration
 
-## Initial contracts and infrastructure
-
-- `openapi/smartretailx-api.yaml`
-- `infrastructure/*`
-- Placeholder application and service directories
+- `README.md` - setup, verification, Docker, API, and infrastructure instructions
+- `ARCHITECTURE.md` - architecture and event-flow design
+- `DEPLOYMENT.md` - deployment gates and procedures
+- `SECURITY.md` - security controls and limitations
+- `COST_GUARDRAILS.md` - cost controls
+- `PROJECT_SPEC.md` - project scope
+- `docs` - ADRs, traceability, and runbooks
+- `.env.example` and `apps/web/.env.example` - placeholder-only environment schemas
+- `package.json` and `package-lock.json` - reproducible npm workspace dependencies

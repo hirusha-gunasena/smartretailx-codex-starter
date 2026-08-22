@@ -3,6 +3,7 @@ import { createDynamoDBDocumentClient } from '../adapters/dynamodb/dynamodb-clie
 import { DynamoDBOrderWorkflowRepository } from '../adapters/dynamodb/dynamodb-order-workflow-repository.js';
 import { createOrderWorkflowSqsHandler } from '../adapters/events/order-workflow-sqs-handler.js';
 import type { OrderWorkflowSqsHandler } from '../adapters/events/order-workflow-sqs-handler.js';
+import { ConsoleSagaTelemetry } from '../adapters/telemetry/console-saga-telemetry.js';
 import { ProcessInventoryOutcome } from '../application/process-inventory-outcome.js';
 import {
   readOrderWorkflowConfiguration,
@@ -19,7 +20,7 @@ export const createOrderWorkflowHandler = (
   );
   const processor = new ProcessInventoryOutcome(repository);
 
-  return createOrderWorkflowSqsHandler(processor);
+  return createOrderWorkflowSqsHandler(processor, new ConsoleSagaTelemetry());
 };
 
 export const createOrderWorkflowHandlerFromEnvironment = (): OrderWorkflowSqsHandler =>

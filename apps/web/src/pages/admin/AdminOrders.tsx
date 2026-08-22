@@ -84,7 +84,7 @@ export const AdminOrders: React.FC = () => {
                     </span>
                   </td>
                   <td className="p-4 font-semibold text-sm text-gray-900">
-                    ${order.totalAmount.toFixed(2)} {order.currency}
+                    {order.totalAmount.toFixed(2)} {order.currency}
                   </td>
                   <td className="p-4 text-sm text-gray-500">
                     {new Date(order.createdAt).toLocaleDateString()}

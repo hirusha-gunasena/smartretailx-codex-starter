@@ -66,6 +66,7 @@ test('creates the configured Catalogue Lambda outside a VPC', () => {
     MemorySize: 256,
     Runtime: 'nodejs22.x',
     Timeout: 10,
+    TracingConfig: { Mode: 'Active' },
   });
 
   const functions = template.findResources('AWS::Lambda::Function');

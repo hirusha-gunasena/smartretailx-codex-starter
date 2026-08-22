@@ -78,7 +78,7 @@ export const MyOrders: React.FC = () => {
                     Order #{order.orderId.substring(0, 8)}
                   </p>
                   <p className="font-bold text-gray-900 text-lg mt-1">
-                    ${order.totalAmount.toFixed(2)} {order.currency}
+                    {order.totalAmount.toFixed(2)} {order.currency}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     {new Date(order.createdAt).toLocaleDateString('en-US', {

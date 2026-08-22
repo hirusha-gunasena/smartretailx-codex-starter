@@ -107,6 +107,13 @@ export class DynamoDbProductRepository implements ProductRepository {
       expressionAttributeValues[':description'] = product.description;
     }
 
+    if (product.category === undefined) {
+      removeExpressions.push('#category');
+    } else {
+      setExpressions.push('#category = :category');
+      expressionAttributeValues[':category'] = product.category;
+    }
+
     if (product.imageUrl === undefined) {
       removeExpressions.push('#imageUrl');
     } else {
@@ -131,6 +138,7 @@ export class DynamoDbProductRepository implements ProductRepository {
             '#currency': 'currency',
             '#updatedAt': 'updatedAt',
             '#description': 'description',
+            '#category': 'category',
             '#imageUrl': 'imageUrl',
           },
           ExpressionAttributeValues: expressionAttributeValues,

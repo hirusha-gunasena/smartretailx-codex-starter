@@ -143,7 +143,7 @@ test('defines one hardened Linux x86 Fargate task with separate roles', () => {
       CpuArchitecture: 'X86_64',
       OperatingSystemFamily: 'LINUX',
     },
-    ContainerDefinitions: [
+    ContainerDefinitions: Match.arrayWith([
       Match.objectLike({
         Name: 'order-service',
         Essential: true,
@@ -157,13 +157,13 @@ test('defines one hardened Linux x86 Fargate task with separate roles', () => {
         },
         PortMappings: [Match.objectLike({ ContainerPort: 3000, HostPort: 3000 })],
       }),
-    ],
+    ]),
   });
 });
 
-test('uses only non-secret production container configuration and awslogs', () => {
+test('uses only non-secret production application configuration and awslogs', () => {
   template.hasResourceProperties('AWS::ECS::TaskDefinition', {
-    ContainerDefinitions: [
+    ContainerDefinitions: Match.arrayWith([
       Match.objectLike({
         Environment: Match.arrayWith([
           { Name: 'COGNITO_USER_POOL_CLIENT_ID', Value: 'example-spa-client-id' },
@@ -172,6 +172,18 @@ test('uses only non-secret production container configuration and awslogs', () =
             Value: 'https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_example',
           },
           { Name: 'NODE_ENV', Value: 'production' },
+          {
+            Name: 'NODE_OPTIONS',
+            Value: '--require @opentelemetry/auto-instrumentations-node/register',
+          },
+          { Name: 'NODE_PATH', Value: '/workspace/domains/order/service/node_modules' },
+          {
+            Name: 'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT',
+            Value: 'http://127.0.0.1:4318/v1/traces',
+          },
+          { Name: 'OTEL_TRACES_EXPORTER', Value: 'otlp' },
+          { Name: 'OTEL_TRACES_SAMPLER', Value: 'parentbased_traceidratio' },
+          { Name: 'OTEL_TRACES_SAMPLER_ARG', Value: '0.1' },
           { Name: 'ORDERS_TABLE_NAME', Value: 'smartretailx-orders-dev' },
           { Name: 'PORT', Value: '3000' },
         ]),
@@ -180,10 +192,53 @@ test('uses only non-secret production container configuration and awslogs', () =
           Options: Match.objectLike({ 'awslogs-stream-prefix': 'order-service' }),
         }),
       }),
-    ],
+    ]),
   });
   const taskDefinition = JSON.stringify(resourcesOfType('AWS::ECS::TaskDefinition'));
   expect(taskDefinition).not.toMatch(/AWS_ACCESS_KEY|AWS_SECRET|PASSWORD|TOKEN/iu);
+});
+
+test('runs a pinned healthy ADOT collector sidecar before the Order application', () => {
+  const taskDefinition = propertyObject(resourcesOfType('AWS::ECS::TaskDefinition')[0]!);
+  const containers = taskDefinition.ContainerDefinitions as Array<Record<string, unknown>>;
+  const application = containers.find((container) => container.Name === 'order-service');
+  const collector = containers.find((container) => container.Name === 'aws-otel-collector');
+
+  expect(containers).toHaveLength(2);
+  expect(collector).toEqual(
+    expect.objectContaining({
+      Command: ['--config=/etc/ecs/ecs-default-config.yaml'],
+      Cpu: 64,
+      Essential: true,
+      Image:
+        'public.ecr.aws/aws-observability/aws-otel-collector@sha256:d2bdfff2c377c3d71d78bd5d9ce9862fd535b12134a5739d87a07801297cf9fd',
+      MemoryReservation: 128,
+      HealthCheck: {
+        Command: ['CMD', '/healthcheck'],
+        Interval: 10,
+        Retries: 3,
+        StartPeriod: 5,
+        Timeout: 5,
+      },
+      LogConfiguration: expect.objectContaining({
+        LogDriver: 'awslogs',
+        Options: expect.objectContaining({ 'awslogs-stream-prefix': 'otel-collector' }),
+      }),
+    }),
+  );
+  expect(collector?.Environment).toEqual(
+    expect.arrayContaining([
+      { Name: 'AWS_DEFAULT_REGION', Value: { Ref: 'AWS::Region' } },
+      { Name: 'AWS_REGION', Value: { Ref: 'AWS::Region' } },
+    ]),
+  );
+  expect(application).toEqual(
+    expect.objectContaining({
+      Cpu: 192,
+      DependsOn: [{ Condition: 'HEALTHY', ContainerName: 'aws-otel-collector' }],
+      MemoryReservation: 256,
+    }),
+  );
 });
 
 test('creates seven-day container and API access log groups', () => {
@@ -217,22 +272,50 @@ test('grants the execution role only ECR pull and container log writes', () => {
   expect(policyActions(executionPolicy!)).not.toEqual(expect.arrayContaining(['dynamodb:GetItem']));
 });
 
-test('grants the application task role only actual REST repository actions on Orders', () => {
+test('grants the application task role only repository and X-Ray export actions', () => {
   const policies = resourcesOfType('AWS::IAM::Policy');
   const applicationPolicy = policies.find((policy) =>
     String(propertyObject(policy).PolicyName).includes('OrderApplicationTaskRole'),
   );
   expect(applicationPolicy).toBeDefined();
   expect(policyActions(applicationPolicy!).sort()).toEqual(
-    ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:Query', 'dynamodb:Scan'].sort(),
+    [
+      'dynamodb:GetItem',
+      'dynamodb:PutItem',
+      'dynamodb:Query',
+      'dynamodb:Scan',
+      'xray:PutTelemetryRecords',
+      'xray:PutTraceSegments',
+    ].sort(),
   );
 
   const serializedPolicy = JSON.stringify(applicationPolicy);
   expect(serializedPolicy).toContain(':table/smartretailx-orders-dev');
   expect(serializedPolicy).toContain('/index/customerId-createdAt-index');
   expect(serializedPolicy).not.toMatch(
-    /events:PutEvents|sqs:|sns:|cognito-idp:Admin|iam:|secretsmanager:|dynamodb:\*/u,
+    /events:PutEvents|sqs:|sns:|cognito-idp:Admin|iam:|secretsmanager:|dynamodb:\*|xray:\*/u,
   );
+});
+
+test('scopes X-Ray telemetry export to the API actions that require wildcard resources', () => {
+  const policies = resourcesOfType('AWS::IAM::Policy');
+  const applicationPolicy = policies.find((policy) =>
+    String(propertyObject(policy).PolicyName).includes('OrderApplicationTaskRole'),
+  );
+  const document = propertyObject(applicationPolicy!).PolicyDocument as {
+    Statement: { Action: string | string[]; Resource: unknown }[];
+  };
+  const xrayStatement = document.Statement.find((statement) =>
+    (Array.isArray(statement.Action) ? statement.Action : [statement.Action]).some((action) =>
+      action.startsWith('xray:'),
+    ),
+  );
+
+  expect(xrayStatement).toEqual({
+    Action: ['xray:PutTelemetryRecords', 'xray:PutTraceSegments'],
+    Effect: 'Allow',
+    Resource: '*',
+  });
 });
 
 test('scopes DynamoDB Query to only the customer orders GSI ARN', () => {

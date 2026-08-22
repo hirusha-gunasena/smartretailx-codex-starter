@@ -31,13 +31,12 @@ export const ProductDetail: React.FC = () => {
   useEffect(() => {
     if (!productId) return;
 
-    Promise.all([
-      getProduct(productId),
-      getInventory(productId).catch(() => ({ availableQuantity: 0 })), // fallback if inventory fails or not found
-    ])
+    Promise.all([getProduct(productId), getInventory(productId).catch(() => null)])
       .then(([productData, inventoryData]) => {
         setProduct(productData);
-        setAvailableQuantity(inventoryData.availableQuantity || 0);
+        // Do not treat an unavailable stock read as zero stock. Anonymous users
+        // can read inventory, while write operations remain authenticated.
+        setAvailableQuantity(inventoryData?.availableQuantity ?? null);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -81,7 +80,7 @@ export const ProductDetail: React.FC = () => {
           </button>
           <span className="mx-2">/</span>
           <button
-            onClick={() => navigate('/catalogue')}
+            onClick={() => navigate('/products')}
             className="hover:text-black transition-colors"
           >
             Catalogue
@@ -101,7 +100,7 @@ export const ProductDetail: React.FC = () => {
                   <img
                     src={product.imageUrl}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain p-6"
                   />
                 ) : (
                   <span className="text-gray-300 text-sm font-mono tracking-wider">
@@ -122,7 +121,7 @@ export const ProductDetail: React.FC = () => {
 
             <div className="flex items-center space-x-4 mt-6">
               <p className="text-2xl font-medium text-gray-900">
-                ${product.price.toFixed(2)}{' '}
+                {product.price.toFixed(2)}{' '}
                 <span className="text-base text-gray-500 font-normal">{product.currency}</span>
               </p>
               {availableQuantity !== null && (
@@ -196,7 +195,7 @@ export const ProductDetail: React.FC = () => {
               >
                 {availableQuantity === 0
                   ? 'Out of Stock'
-                  : `Add to Bag — $${(product.price * quantity).toFixed(2)}`}
+                  : `Add to Bag — ${(product.price * quantity).toFixed(2)} ${product.currency}`}
               </button>
             </div>
 

@@ -1,6 +1,7 @@
 export {
   createProductRequestSchema,
   currencySchema,
+  productCategorySchema,
   orderItemSchema,
   productIdSchema,
   productSchema,

@@ -1,5 +1,6 @@
 import { EventBridgeClient } from '@aws-sdk/client-eventbridge';
 import { EventBridgeInventoryEventPublisher } from './eventbridge-inventory-event-publisher.js';
+import { ConsoleSagaTelemetry } from '../telemetry/console-saga-telemetry.js';
 import { readInventoryOutcomeRelayConfiguration } from './inventory-outcome-relay-configuration.js';
 import type { InventoryOutcomeRelayConfiguration } from './inventory-outcome-relay-configuration.js';
 import { createInventoryOutcomeRelayHandler } from './inventory-outcome-relay-handler.js';
@@ -10,7 +11,7 @@ export const createInventoryOutcomeRelay = (
   client: EventBridgeClient = new EventBridgeClient({}),
 ): InventoryOutcomeRelayHandler => {
   const publisher = new EventBridgeInventoryEventPublisher(client, configuration.eventBusName);
-  return createInventoryOutcomeRelayHandler(publisher);
+  return createInventoryOutcomeRelayHandler(publisher, new ConsoleSagaTelemetry());
 };
 
 export const createInventoryOutcomeRelayFromEnvironment = (

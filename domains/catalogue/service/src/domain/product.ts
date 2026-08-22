@@ -80,6 +80,7 @@ export class ProductEntity {
       createdAt: timestamp,
       updatedAt: timestamp,
       ...(input.description === undefined ? {} : { description: input.description }),
+      ...(input.category === undefined ? {} : { category: input.category }),
       ...(input.imageUrl === undefined ? {} : { imageUrl: input.imageUrl }),
     });
 
@@ -104,6 +105,11 @@ export class ProductEntity {
         : this.state.description === undefined
           ? {}
           : { description: this.state.description }),
+      ...(input.category !== undefined
+        ? { category: input.category }
+        : this.state.category === undefined
+          ? {}
+          : { category: this.state.category }),
       ...(input.imageUrl !== undefined
         ? { imageUrl: input.imageUrl }
         : this.state.imageUrl === undefined

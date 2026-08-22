@@ -159,6 +159,7 @@ export class InventoryStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
       timeout: cdk.Duration.seconds(15),
+      tracing: lambda.Tracing.ACTIVE,
       environment: {
         INVENTORY_TABLE_NAME: inventoryTable.tableName,
         INVENTORY_RESERVATIONS_TABLE_NAME: reservationsTable.tableName,
@@ -227,6 +228,7 @@ export class InventoryStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
+      tracing: lambda.Tracing.ACTIVE,
       environment: {
         INVENTORY_EVENT_BUS_NAME: props.orderEventBus.eventBusName,
       },
@@ -310,6 +312,7 @@ export class InventoryStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
+      tracing: lambda.Tracing.ACTIVE,
       environment: {
         INVENTORY_TABLE_NAME: inventoryTable.tableName,
       },
@@ -365,7 +368,13 @@ export class InventoryStack extends cdk.Stack {
 
     inventoryApi.addRoutes({
       path: '/api/v1/inventory/{productId}',
-      methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.PATCH],
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: inventoryIntegration,
+    });
+
+    inventoryApi.addRoutes({
+      path: '/api/v1/inventory/{productId}',
+      methods: [apigatewayv2.HttpMethod.PATCH],
       integration: inventoryIntegration,
       authorizer: inventoryAuthorizer,
       authorizationScopes: ['openid'],

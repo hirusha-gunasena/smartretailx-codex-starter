@@ -4,7 +4,12 @@ import {
   UnreportableStreamRecordFailureError,
   createInventoryOutcomeRelayHandler,
 } from '../../src/index.js';
-import type { InventoryOutcomeEvent, InventoryOutcomeEventPublisher } from '../../src/index.js';
+import type {
+  InventoryOutcomeEvent,
+  InventoryOutcomeEventPublisher,
+  SagaSuccessTelemetryEntry,
+  SagaTelemetry,
+} from '../../src/index.js';
 import {
   SECOND_PRODUCT_ID,
   rejectedReservationFixture,
@@ -47,15 +52,47 @@ describe('createInventoryOutcomeRelayHandler', () => {
     ['InventoryRejected', rejectedReservationFixture()],
   ] as const)('publishes one successful %s INSERT', async (eventType, reservation) => {
     publish.mockResolvedValue();
-    const handler = createInventoryOutcomeRelayHandler(publisher);
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const telemetry: SagaTelemetry = { recordSuccess };
+    const handler = createInventoryOutcomeRelayHandler(publisher, telemetry);
 
     await expect(
       handler(
         inventoryOutcomeStreamEventFixture([inventoryOutcomeStreamRecordFixture(reservation)]),
+        { awsRequestId: 'inventory-outcome-relay-request-id' },
       ),
     ).resolves.toEqual({ batchItemFailures: [] });
     expect(publish).toHaveBeenCalledTimes(1);
-    expect(publish.mock.calls[0]![0].eventType).toBe(eventType);
+    const publishedEvent = publish.mock.calls[0]![0];
+    expect(publishedEvent.eventType).toBe(eventType);
+    expect(recordSuccess).toHaveBeenCalledWith({
+      event: 'saga.success',
+      stage: 'INVENTORY_OUTCOME_RELAY',
+      outcome: 'PUBLISHED',
+      requestId: 'inventory-outcome-relay-request-id',
+      eventId: publishedEvent.eventId,
+      eventType: publishedEvent.eventType,
+      eventVersion: publishedEvent.eventVersion,
+      occurredAt: publishedEvent.occurredAt,
+      correlationId: publishedEvent.correlationId,
+      orderId: publishedEvent.data.orderId,
+    });
+  });
+
+  test('does not emit success telemetry when outcome publication fails', async () => {
+    publish.mockRejectedValue(new Error('publication failed'));
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const handler = createInventoryOutcomeRelayHandler(publisher, { recordSuccess });
+
+    await expect(
+      handler(
+        inventoryOutcomeStreamEventFixture([
+          withSequence(inventoryOutcomeStreamRecordFixture(), SEQUENCE_ONE),
+        ]),
+        { awsRequestId: 'failed-inventory-outcome-relay-request-id' },
+      ),
+    ).resolves.toEqual({ batchItemFailures: [{ itemIdentifier: SEQUENCE_ONE }] });
+    expect(recordSuccess).not.toHaveBeenCalled();
   });
 
   test.each(['MODIFY', 'REMOVE'] as const)(

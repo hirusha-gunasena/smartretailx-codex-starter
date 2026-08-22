@@ -1,0 +1,136 @@
+{
+  "runId": "2026-08-21T061829217Z",
+  "region": "ap-south-1",
+  "testWindowUtc": {
+    "start": "2026-08-21T06:19:25Z",
+    "end": "2026-08-21T06:26:57Z"
+  },
+  "authentication": {
+    "flow": "Cognito Authorization Code with PKCE S256",
+    "tokenUse": "access",
+    "recognizedGroup": "customer",
+    "secretsPersisted": false
+  },
+  "k6": {
+    "baseline": {
+      "virtualUsers": 5,
+      "durationSeconds": 30,
+      "requests": 145,
+      "throughputRequestsPerSecond": 4.734712,
+      "averageMilliseconds": 48.367779,
+      "p95Milliseconds": 98.0195,
+      "maximumMilliseconds": 116.0564,
+      "failedRequests": 0,
+      "checksPassed": 290,
+      "checksFailed": 0
+    },
+    "staged": {
+      "durationSeconds": 420,
+      "maximumVirtualUsers": 50,
+      "iterations": 9155,
+      "requests": 18310,
+      "throughputRequestsPerSecond": 43.509121,
+      "averageMilliseconds": 48.710507,
+      "p95Milliseconds": 63.51697,
+      "p99Milliseconds": 114.15,
+      "maximumMilliseconds": 845.3183,
+      "failedRequests": 1,
+      "failedRequestRate": 0.000054615,
+      "checksPassed": 36618,
+      "checksFailed": 2,
+      "orderP95Milliseconds": 44.50815,
+      "catalogueP95Milliseconds": 66.31621,
+      "latencyThresholdsPassed": true,
+      "errorRateThresholdPassed": true,
+      "strictChecksThresholdPassed": false
+    }
+  },
+  "cloudWatch": {
+    "minuteLabelsUtc": [
+      "06:19",
+      "06:20",
+      "06:21",
+      "06:22",
+      "06:23",
+      "06:24",
+      "06:25",
+      "06:26",
+      "06:27"
+    ],
+    "catalogueApi": {
+      "requestCountPerMinute": [1, 308, 989, 1096, 1301, 2534, 2416, 510, 0],
+      "fiveXxPerMinute": [0, 0, 0, 0, 1, 0, 0, 0, 0],
+      "fourXxTotal": 0,
+      "averageLatencyMillisecondsPerMinute": [
+        247.0,
+        25.3084,
+        21.5379,
+        21.6624,
+        22.1722,
+        20.9349,
+        20.2868,
+        19.6647,
+        null
+      ]
+    },
+    "orderApi": {
+      "requestCountPerMinute": [146, 307, 988, 1095, 1304, 2533, 2416, 511, 0],
+      "fiveXxTotal": 0,
+      "fourXxTotal": 0,
+      "averageLatencyMillisecondsPerMinute": [
+        15.0342,
+        7.8208,
+        8.7986,
+        7.6795,
+        14.5368,
+        11.5385,
+        7.4259,
+        6.9217,
+        null
+      ]
+    },
+    "catalogueLambda": {
+      "invocationsPerMinute": [1, 308, 989, 1096, 1300, 2534, 2416, 510, 0],
+      "errorsTotal": 0,
+      "throttlesPerMinute": [0, 0, 0, 0, 1, 0, 0, 0, 0],
+      "maximumConcurrencyPerMinute": [1, 2, 4, 4, 10, 8, 7, 4, 0],
+      "averageDurationMillisecondsPerMinute": [
+        250.11,
+        16.7792,
+        13.9052,
+        14.6741,
+        14.695,
+        14.594,
+        12.4584,
+        11.5533,
+        null
+      ]
+    },
+    "orderEcs": {
+      "averageCpuPercentPerMinute": [
+        2.8878, 6.8439, 24.3274, 25.9135, 28.305, 44.6638, 48.9076, 19.955, 0.8396
+      ],
+      "maximumCpuPercent": 51.7291,
+      "averageMemoryPercentPerMinute": [
+        7.6172, 7.7474, 8.2031, 8.7565, 9.082, 9.2122, 9.4727, 8.9844, 6.4453
+      ],
+      "maximumMemoryPercent": 9.5703,
+      "desiredTasks": 1,
+      "runningTasks": 1,
+      "pendingTasks": 0
+    },
+    "dynamoDb": {
+      "productsBillingMode": "PAY_PER_REQUEST",
+      "ordersBillingMode": "PAY_PER_REQUEST",
+      "productsReadThrottleDatapoints": 0,
+      "ordersReadThrottleDatapoints": 0
+    }
+  },
+  "postRun": {
+    "smartRetailXStackCount": 10,
+    "allStacksHealthy": true,
+    "orderServiceRollout": "COMPLETED",
+    "applicationDataMutations": 0,
+    "awsResourceMutations": 0
+  }
+}

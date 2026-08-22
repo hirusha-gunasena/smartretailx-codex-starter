@@ -104,6 +104,7 @@ export class CatalogueStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_22_X,
       memorySize: 256,
       timeout: cdk.Duration.seconds(10),
+      tracing: lambda.Tracing.ACTIVE,
       environment: {
         PRODUCTS_TABLE_NAME: productsTable.tableName,
         PRODUCT_IMAGES_BUCKET_NAME: imagesBucket.bucketName,

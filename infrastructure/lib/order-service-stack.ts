@@ -28,6 +28,8 @@ const ALB_LISTENER_PORT = 80;
 const ORDER_HEALTH_PATH = '/health';
 const ORDER_VPC_CIDR = '10.24.0.0/16';
 const CUSTOMER_ORDERS_INDEX_NAME = 'customerId-createdAt-index';
+const ADOT_COLLECTOR_IMAGE =
+  'public.ecr.aws/aws-observability/aws-otel-collector@sha256:d2bdfff2c377c3d71d78bd5d9ce9862fd535b12134a5739d87a07801297cf9fd';
 
 export class OrderServiceStack extends cdk.Stack {
   public readonly orderService: ecs.FargateService;
@@ -146,6 +148,12 @@ export class OrderServiceStack extends cdk.Stack {
         resources: [`${ordersTable.tableArn}/index/${CUSTOMER_ORDERS_INDEX_NAME}`],
       }),
     );
+    taskRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['xray:PutTelemetryRecords', 'xray:PutTraceSegments'],
+        resources: ['*'],
+      }),
+    );
 
     const taskDefinition = new ecs.FargateTaskDefinition(this, 'OrderTaskDefinition', {
       family: orderServiceName,
@@ -163,14 +171,56 @@ export class OrderServiceStack extends cdk.Stack {
     });
     linuxParameters.dropCapabilities(ecs.Capability.ALL);
 
+    const telemetryCollector = taskDefinition.addContainer('OrderTelemetryCollector', {
+      containerName: 'aws-otel-collector',
+      image: ecs.ContainerImage.fromRegistry(ADOT_COLLECTOR_IMAGE),
+      command: ['--config=/etc/ecs/ecs-default-config.yaml'],
+      cpu: 64,
+      memoryReservationMiB: 128,
+      essential: true,
+      environment: {
+        AWS_DEFAULT_REGION: cdk.Stack.of(this).region,
+        AWS_REGION: cdk.Stack.of(this).region,
+      },
+      healthCheck: {
+        command: ['CMD', '/healthcheck'],
+        interval: cdk.Duration.seconds(10),
+        retries: 3,
+        startPeriod: cdk.Duration.seconds(5),
+        timeout: cdk.Duration.seconds(5),
+      },
+      logging: ecs.LogDrivers.awsLogs({
+        logGroup: containerLogGroup,
+        streamPrefix: 'otel-collector',
+      }),
+      stopTimeout: cdk.Duration.seconds(30),
+    });
+
     const container = taskDefinition.addContainer('OrderContainer', {
       containerName: 'order-service',
       image: ecs.ContainerImage.fromEcrRepository(props.repository, props.imageTag),
+      cpu: 192,
+      memoryReservationMiB: 256,
       essential: true,
       environment: {
         COGNITO_USER_POOL_CLIENT_ID: props.userPoolClientId,
         COGNITO_USER_POOL_ISSUER: props.userPoolIssuer,
         NODE_ENV: 'production',
+        NODE_OPTIONS: '--require @opentelemetry/auto-instrumentations-node/register',
+        NODE_PATH: '/workspace/domains/order/service/node_modules',
+        OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf',
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'http://127.0.0.1:4318/v1/traces',
+        OTEL_LOGS_EXPORTER: 'none',
+        OTEL_LOG_LEVEL: 'warn',
+        OTEL_METRICS_EXPORTER: 'none',
+        OTEL_RESOURCE_ATTRIBUTES: [
+          `service.name=${orderServiceName}`,
+          `service.namespace=${props.projectName}`,
+          `deployment.environment.name=${props.environmentName}`,
+        ].join(','),
+        OTEL_TRACES_EXPORTER: 'otlp',
+        OTEL_TRACES_SAMPLER: 'parentbased_traceidratio',
+        OTEL_TRACES_SAMPLER_ARG: '0.1',
         ORDERS_TABLE_NAME: ordersTableName,
         PORT: String(ORDER_CONTAINER_PORT),
       },
@@ -183,6 +233,10 @@ export class OrderServiceStack extends cdk.Stack {
       readonlyRootFilesystem: true,
       stopTimeout: cdk.Duration.seconds(30),
       user: 'node',
+    });
+    container.addContainerDependencies({
+      container: telemetryCollector,
+      condition: ecs.ContainerDependencyCondition.HEALTHY,
     });
     container.addPortMappings({
       containerPort: ORDER_CONTAINER_PORT,
@@ -237,7 +291,12 @@ export class OrderServiceStack extends cdk.Stack {
       minHealthyPercent: 100,
       maxHealthyPercent: 200,
     });
-    service.attachToApplicationTargetGroup(targetGroup);
+    targetGroup.addTarget(
+      service.loadBalancerTarget({
+        containerName: container.containerName,
+        containerPort: ORDER_CONTAINER_PORT,
+      }),
+    );
     this.orderService = service;
 
     const scalableTaskCount = service.autoScaleTaskCount({

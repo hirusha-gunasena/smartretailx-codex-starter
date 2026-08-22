@@ -9,6 +9,8 @@ import type {
   InventoryOutcomeEvent,
   InventoryOutcomeProcessor,
   OrderWorkflowTransitionResult,
+  SagaSuccessTelemetryEntry,
+  SagaTelemetry,
 } from '../../src/index.js';
 import { ORDER_ID } from '../support/fixtures.js';
 import {
@@ -40,12 +42,29 @@ describe('createOrderWorkflowSqsHandler', () => {
 
   test('successfully processes InventoryReserved', async () => {
     execute.mockResolvedValue(ORDER_WORKFLOW_TRANSITION_RESULT.UPDATED);
-    const handler = createOrderWorkflowSqsHandler(processor);
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const telemetry: SagaTelemetry = { recordSuccess };
+    const handler = createOrderWorkflowSqsHandler(processor, telemetry);
 
     await expect(
-      handler(orderWorkflowSqsEventFixture([orderWorkflowSqsRecordFixture('reserved-message')])),
+      handler(orderWorkflowSqsEventFixture([orderWorkflowSqsRecordFixture('reserved-message')]), {
+        awsRequestId: 'workflow-request-id',
+      }),
     ).resolves.toEqual({ batchItemFailures: [] });
-    expect(execute).toHaveBeenCalledWith(inventoryReservedFixture());
+    const inventoryOutcome = inventoryReservedFixture();
+    expect(execute).toHaveBeenCalledWith(inventoryOutcome);
+    expect(recordSuccess).toHaveBeenCalledWith({
+      event: 'saga.success',
+      stage: 'ORDER_WORKFLOW',
+      outcome: 'UPDATED',
+      requestId: 'workflow-request-id',
+      eventId: inventoryOutcome.eventId,
+      eventType: inventoryOutcome.eventType,
+      eventVersion: inventoryOutcome.eventVersion,
+      occurredAt: inventoryOutcome.occurredAt,
+      correlationId: inventoryOutcome.correlationId,
+      orderId: inventoryOutcome.data.orderId,
+    });
   });
 
   test('successfully processes InventoryRejected', async () => {
@@ -68,11 +87,28 @@ describe('createOrderWorkflowSqsHandler', () => {
 
   test('treats ALREADY_APPLIED duplicate processing as success', async () => {
     execute.mockResolvedValue(ORDER_WORKFLOW_TRANSITION_RESULT.ALREADY_APPLIED);
-    const handler = createOrderWorkflowSqsHandler(processor);
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const handler = createOrderWorkflowSqsHandler(processor, { recordSuccess });
 
     await expect(
       handler(orderWorkflowSqsEventFixture([orderWorkflowSqsRecordFixture('duplicate-message')])),
     ).resolves.toEqual({ batchItemFailures: [] });
+    expect(recordSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: 'ALREADY_APPLIED', stage: 'ORDER_WORKFLOW' }),
+    );
+  });
+
+  test('does not emit success telemetry for a failed workflow transition', async () => {
+    execute.mockRejectedValue(new Error('DynamoDB unavailable'));
+    const recordSuccess = jest.fn<(entry: SagaSuccessTelemetryEntry) => void>();
+    const handler = createOrderWorkflowSqsHandler(processor, { recordSuccess });
+
+    await expect(
+      handler(orderWorkflowSqsEventFixture([orderWorkflowSqsRecordFixture('failed-message')]), {
+        awsRequestId: 'failed-workflow-request-id',
+      }),
+    ).resolves.toEqual({ batchItemFailures: [{ itemIdentifier: 'failed-message' }] });
+    expect(recordSuccess).not.toHaveBeenCalled();
   });
 
   test('processes multiple successful messages', async () => {

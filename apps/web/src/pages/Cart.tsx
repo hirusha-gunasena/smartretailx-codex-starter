@@ -77,7 +77,7 @@ export const Cart: React.FC = () => {
                         {item.name}
                       </Link>
                       <p className="text-gray-500 text-sm mt-1">
-                        ${item.price.toFixed(2)} {item.currency}
+                        {item.price.toFixed(2)} {item.currency}
                       </p>
                     </div>
 

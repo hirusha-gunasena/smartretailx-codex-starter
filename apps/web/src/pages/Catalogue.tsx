@@ -5,8 +5,6 @@ import { getProducts } from '../api/catalogue';
 import { useCart } from '../cart/CartProvider';
 import { Filter, ChevronDown } from 'lucide-react';
 
-const CATEGORIES = ['Audio', 'Wearables', 'Accessories', 'Laptops', 'Storage'];
-
 const PRICE_RANGES = [
   { label: 'All Prices', min: 0, max: Infinity },
   { label: 'Under $100', min: 0, max: 100 },
@@ -34,6 +32,13 @@ export const Catalogue: React.FC = () => {
 
   const { addToCart } = useCart();
   const location = useLocation();
+  const categories = useMemo(
+    () =>
+      Array.from(new Set(allProducts.map((product) => product.category?.trim() || 'Other'))).sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [allProducts],
+  );
 
   useEffect(() => {
     getProducts()
@@ -49,12 +54,12 @@ export const Catalogue: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const categoryQuery = params.get('category')?.toLowerCase();
     if (categoryQuery) {
-      const match = CATEGORIES.find((c) => c.toLowerCase() === categoryQuery);
+      const match = categories.find((c) => c.toLowerCase() === categoryQuery);
       if (match && !selectedCategories.includes(match)) {
         setSelectedCategories([match]);
       }
     }
-  }, [location.search]);
+  }, [categories, location.search, selectedCategories]);
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories((prev) =>
@@ -72,16 +77,14 @@ export const Catalogue: React.FC = () => {
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(searchQuery) ||
-          (p.description && p.description.toLowerCase().includes(searchQuery)),
+          (p.description && p.description.toLowerCase().includes(searchQuery)) ||
+          (p.category && p.category.toLowerCase().includes(searchQuery)),
       );
     }
 
-    // 2. Category Filter (derive by matching category name against product name/description)
+    // 2. Category Filter (use the category saved with each product)
     if (selectedCategories.length > 0) {
-      result = result.filter((p) => {
-        const text = `${p.name} ${p.description || ''}`.toLowerCase();
-        return selectedCategories.some((cat) => text.includes(cat.toLowerCase()));
-      });
+      result = result.filter((p) => selectedCategories.includes(p.category?.trim() || 'Other'));
     }
 
     // 3. Price Filter
@@ -177,7 +180,7 @@ export const Catalogue: React.FC = () => {
                 Category
               </h3>
               <div className="space-y-3">
-                {CATEGORIES.map((category) => (
+                {categories.map((category) => (
                   <label key={category} className="flex items-center group cursor-pointer">
                     <div
                       className={`w-4 h-4 border flex items-center justify-center transition-colors ${selectedCategories.includes(category) ? 'bg-black border-black' : 'border-gray-300 group-hover:border-black'}`}
@@ -266,7 +269,7 @@ export const Catalogue: React.FC = () => {
                           <img
                             src={product.imageUrl}
                             alt={product.name}
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                            className="h-full w-full object-contain p-4 group-hover:scale-105 transition-transform duration-700 ease-out"
                           />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center">
@@ -289,7 +292,7 @@ export const Catalogue: React.FC = () => {
                       <div className="flex justify-between items-start">
                         <h3 className="text-sm font-medium text-gray-900 pr-4">{product.name}</h3>
                         <p className="text-sm text-gray-900 font-semibold whitespace-nowrap">
-                          ${product.price.toFixed(2)}
+                          {product.price.toFixed(2)} {product.currency}
                         </p>
                       </div>
                       <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider truncate w-4/5">

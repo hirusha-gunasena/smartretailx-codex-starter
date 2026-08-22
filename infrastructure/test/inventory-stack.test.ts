@@ -284,6 +284,15 @@ test('creates the Node.js 22 Inventory consumer outside a VPC', () => {
   expect(propertiesOf(inventoryFunction)).not.toHaveProperty('DeadLetterConfig');
 });
 
+test('enables active X-Ray tracing on every Inventory Lambda', () => {
+  const functions = Object.values(inventoryTemplate.findResources('AWS::Lambda::Function'));
+
+  expect(functions).toHaveLength(3);
+  for (const lambdaFunction of functions) {
+    expect(propertiesOf(lambdaFunction).TracingConfig).toEqual({ Mode: 'Active' });
+  }
+});
+
 test('retains dedicated Inventory consumer logs for seven days in development', () => {
   inventoryTemplate.resourceCountIs('AWS::Logs::LogGroup', 2);
   inventoryTemplate.hasResourceProperties('AWS::Logs::LogGroup', {

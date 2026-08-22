@@ -62,7 +62,7 @@ test('creates one development Orders GlobalTable with the one customer access GS
       Match.objectLike({
         DeletionProtectionEnabled: false,
         PointInTimeRecoverySpecification: {
-          PointInTimeRecoveryEnabled: false,
+          PointInTimeRecoveryEnabled: true,
         },
         TableClass: 'STANDARD',
       }),
@@ -98,6 +98,7 @@ test('creates one Node.js 22 unified relay Lambda outside a VPC', () => {
     MemorySize: 256,
     Runtime: 'nodejs22.x',
     Timeout: 10,
+    TracingConfig: { Mode: 'Active' },
   });
 
   const relayFunction = Object.values(template.findResources('AWS::Lambda::Function'))[0];
